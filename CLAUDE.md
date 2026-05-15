@@ -112,43 +112,64 @@ restaurantaltkarow/
 
 Vintage, klassisch, warm, gemütlich, **premium**. **Kein** Minimalismus, **kein** Startup-Look, **keine** flache Word-Doc-Optik. Stilreferenz: gehobenes Landhaus-Restaurant, historische Gaststätte modern interpretiert, hochwertige Gastronomie-Drucksachen.
 
-### Farbpalette (CSS-Custom-Properties in `app/globals.css` via `@theme`)
+### Farbpalette — Iteration 4 (FINAL — gegen Braun-Drift)
 
-Tokens sind in `app/globals.css` definiert und stehen automatisch als Tailwind-Klassen zur Verfügung (`bg-burgundy`, `text-ink-strong`, `border-gold/40` etc.).
+> **⚠️ Wichtige Geschichte für künftige Agents:**
+>
+> Iterationen 1–3 nutzten warme, **braungetönte** Töne (Body `#1c130c`, BG `#fdf9ef`, Gold `#b08a3e`, „wood" `#221208`). Der WCAG-Kontrast war zwar AAA, das Gesamtbild aber **gelblich-braun-tea-stained** — der User empfand die Seite zu Recht als „graubraun, schwach, schrecklich".
+>
+> Iteration 4 schwenkt auf das archetypische Premium-Restaurant-Schema:
+> **neutrales Tiefschwarz + reines Bone-Cream + Burgund + Honiggold**.
+>
+> Vergleichsreferenzen: Eleven Madison Park, Charcoal, Geist Berlin.
+>
+> **Token-Namen blieben gleich (`paper`, `wood`, `gold`, `cream`, …), damit Komponenten nicht angefasst werden müssen.**
+> Die **Werte** sind neu und weniger warm. Wenn ein Agent „mehr Wärme" einbauen will → das passiert über **Burgund-/Goldakzente**, **niemals** über braune Texte oder beige-gelbliche Backgrounds. Wer auch nur einen Token Richtung „brauner" dreht, verliert das Premium-Gefühl wieder.
 
-**Hell auf dunkel (Texte auf dunklem Hintergrund):**
+Tokens in `app/globals.css` via `@theme` — automatisch verfügbar als Tailwind-Klassen (`bg-burgundy`, `text-ink-strong`, `border-gold/40` etc.).
 
-| Token                     | Hex       | WCAG vs. `--color-wood` (#1f1109) | Verwendung                                          |
-| ------------------------- | --------- | --------------------------------- | --------------------------------------------------- |
-| `--color-paper`           | `#fdf9ef` | **≈14:1** AAA                      | Hellster, wärmster Cremeton — Brand, Headings, Body |
-| `--color-cream`           | `#f8f0db` | ≈13:1 AAA                          | Standard heller Text (Reserve)                      |
-| `--color-cream-soft`      | `#efe4c8` | ≈11:1 AAA                          | Sekundärtext (Fußnoten, Disclaimer)                 |
-| `--color-gold-soft`       | `#d8b974` | ≈7.5:1 AAA                         | Akzenttext auf dunkel (Uhrzeiten, Links, Eyebrows)  |
-| `--color-gold-pale`       | `#ecd8a0` | ≈10:1 AAA                          | Reserve                                              |
+**Hell auf dunkel** (Texte auf dunklem Hintergrund):
 
-**Dunkel auf hell (Texte auf hellem Hintergrund):**
+| Token                | Hex       | WCAG vs. `--color-wood` (#0d0b06) | Verwendung                                       |
+| -------------------- | --------- | --------------------------------- | ------------------------------------------------ |
+| `--color-paper`      | `#faf6e8` | **≈18:1** AAA                      | Hellster Cremeton — Brand, Headings, Body        |
+| `--color-cream`      | `#f3ecd6` | ≈16:1 AAA                          | Standardtext (Reserve)                            |
+| `--color-cream-soft` | `#d8cfb5` | ≈12:1 AAA                          | Sekundärtext (Fußnoten, Disclaimer)               |
+| `--color-gold-soft`  | `#e8c870` | ≈12:1 AAA                          | Akzenttext auf dunkel (Uhrzeiten, Links, Labels) |
+| `--color-gold-pale`  | `#f3e2ad` | ≈14:1 AAA                          | Reserve                                            |
 
-| Token                     | Hex       | WCAG vs. `--color-paper` (#fdf9ef) | Verwendung                                       |
-| ------------------------- | --------- | ---------------------------------- | ------------------------------------------------ |
-| `--color-ink-strong`      | `#0f0a06` | ≈18:1 AAA                          | Headings, Hauptzitate, Schlüsselwörter, Brand   |
-| `--color-ink`             | `#1c130c` | ≈15:1 AAA                          | **Standard-Bodytext**                            |
-| `--color-ink-soft`        | `#34281c` | ≈11:1 AAA                          | Body-Text mit weniger Wucht (z. B. Disclaimer)  |
-| `--color-muted`           | `#5e4f3c` | ≈7:1 AAA                           | NUR Bildunterschriften / Tabellen-Sekundärinfo  |
+**Dunkel auf hell** (Texte auf hellem Hintergrund):
+
+| Token                | Hex       | WCAG vs. `--color-paper` (#faf6e8) | Verwendung                                       |
+| -------------------- | --------- | ---------------------------------- | ------------------------------------------------ |
+| `--color-ink-strong` | `#0a0907` | ≈19:1 AAA                          | Headings, Brand, Schlüsselwörter                 |
+| `--color-ink`        | `#15120c` | ≈16:1 AAA                          | **Standard-Bodytext**                             |
+| `--color-ink-soft`   | `#2c2820` | ≈11:1 AAA                          | Body mit weniger Wucht                            |
+| `--color-muted`      | `#5a5446` | ≈7:1 AAA                           | NUR Fußnoten / Tabellen-Sekundärinfo             |
+| `--color-burgundy`   | `#6e1f24` | ≈10:1 AAA                          | **Eyebrows + CTAs + Preise auf hellem Grund**     |
 
 **Akzente / Backgrounds:**
 
-| Token                     | Hex       | Verwendung                                          |
-| ------------------------- | --------- | --------------------------------------------------- |
-| `--color-burgundy`        | `#6b1f24` | Primärakzent: CTA-Buttons, aktive Nav, Preise       |
-| `--color-burgundy-deep`   | `#4d161a` | Hover für burgundy                                  |
-| `--color-burgundy-soft`   | `#8a2c33` | Reserve                                              |
-| `--color-gold`            | `#b08a3e` | Ornamente, Eyebrows auf hellem Grund, Trennlinien   |
-| `--color-paper`           | `#fdf9ef` | Haupt-BG (Body)                                     |
-| `--color-paper-deep`      | `#f3ead4` | Karten-BG mit Tiefe                                 |
-| `--color-cream-deep`      | `#e6d8bf` | Sekundär-Sektion-BG (hell)                          |
-| `--color-wood`            | `#1f1109` | Footer + dunkle Sektionen                           |
-| `--color-wood-mid`        | `#281609` | Reserve                                              |
-| `--color-wood-soft`       | `#36210f` | Reserve                                              |
+| Token                   | Hex       | Verwendung                                          |
+| ----------------------- | --------- | --------------------------------------------------- |
+| `--color-burgundy`      | `#6e1f24` | Primärakzent, Eyebrow-Farbe, Preise, CTA            |
+| `--color-burgundy-deep` | `#4d161a` | Hover                                                |
+| `--color-burgundy-soft` | `#8b2b33` | Reserve                                              |
+| `--color-gold`          | `#c19a3a` | Ornamente, Trennlinien, dekorativer Akzent          |
+| `--color-paper`         | `#faf6e8` | Haupt-BG (Body)                                     |
+| `--color-paper-deep`    | `#ece4cb` | Alternierender Sektions-BG                          |
+| `--color-cream-deep`    | `#ddd5c0` | Reserve hell                                         |
+| `--color-wood`          | `#0d0b06` | **Footer + dunkle Sektionen — neutrales Tiefschwarz**, nicht braun (Name ist historisch) |
+| `--color-wood-mid`      | `#15120c` | Karten auf dunkel                                    |
+| `--color-wood-soft`     | `#1f1b14` | Reserve                                              |
+
+> **Naming-Hinweis:** `--color-wood` ist historisch benannt — der HEX-Wert beschreibt jetzt **neutrales Tiefschwarz mit Mikro-Wärme**, nicht braunes Holz. Komponenten-Klassen `bg-wood`, `text-wood` etc. wurden nicht umbenannt (Diff-Sparsamkeit). Beim Lesen einfach „bg-noir / Charcoal" denken.
+
+### Eyebrow-Farbe (wichtige Änderung in Iteration 4)
+
+`.eyebrow` (auf hellem Grund) ist jetzt **Burgund (`#6e1f24`)** statt Gold. Grund: Gold/Honig auf Cremeweiß ergibt nur 2.4 – 3.0 : 1 Kontrast → WCAG-Fail bei Eyebrow-Schriftgröße. Burgund auf Cremeweiß = 10 : 1 AAA, satt, klassisch. Pattern aus Premium-Restaurants (Charcoal, Geist).
+
+`.eyebrow-bright` / `.label-bright` (auf dunklem Grund) bleibt Gold (`#e8c870`) — dort 12 : 1 AAA.
 
 ### Kontrast-Regeln — Iteration 3 (FINAL)
 

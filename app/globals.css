@@ -1,43 +1,55 @@
 @import "tailwindcss";
 
+/* ============================================================
+   PALETTE — Iteration 4
+   Weg vom Braun-/Beigeton. Hin zu neutralem Tiefschwarz + sauberem
+   Bone-Cream + Burgund + hellem Honiggold. Klassische Premium-
+   Restaurant-Kombi (vgl. Eleven Madison Park, Charcoal, Geist).
+
+   WICHTIG: Token-Namen sind unverändert, nur die HEX-Werte sind neu.
+   So müssen Komponentendateien nicht angefasst werden.
+   ============================================================ */
+
 @theme {
-  /* === Dark text on light ============================================ */
-  --color-ink-strong: #0f0a06;     /* maximaler Kontrast — Headings */
-  --color-ink: #1c130c;            /* Standard-Text auf hellem Grund */
-  --color-ink-soft: #34281c;       /* Body-Text mit weniger Wucht */
-  --color-muted: #5e4f3c;          /* Sekundärtext — passt WCAG AAA */
+  /* === Text auf hellem Grund (neutral, nicht braun) ================ */
+  --color-ink-strong: #0a0907;     /* near-pure black, kaum Wärme */
+  --color-ink: #15120c;            /* default body — neutral mit Hauch */
+  --color-ink-soft: #2c2820;       /* softer body */
+  --color-muted: #5a5446;          /* tertiary (sparsam einsetzen) */
 
-  /* === Light text on dark ============================================ */
-  --color-paper: #fdf9ef;          /* hellster, wärmster Cremeton — Brand */
-  --color-paper-deep: #f3ead4;     /* Karten/Hintergrund mit Tiefe */
-  --color-cream: #f8f0db;          /* Standard heller Text */
-  --color-cream-soft: #efe4c8;     /* heller Sekundärtext */
-  --color-cream-deep: #e6d8bf;     /* Sekundär-Sektionshintergrund (hell) */
+  /* === Helle Cremes (bg + Text auf dunkel) ========================= */
+  --color-paper: #faf6e8;          /* main bg UND hellster Text auf dunkel */
+  --color-paper-deep: #ece4cb;     /* alternierender Sektions-bg */
+  --color-cream: #f3ecd6;          /* standard Text auf dunkel */
+  --color-cream-soft: #d8cfb5;     /* sekundär auf dunkel */
+  --color-cream-deep: #ddd5c0;     /* Reserve */
 
-  /* === Akzentfarben ================================================== */
-  --color-burgundy: #6b1f24;
+  /* === Akzente ===================================================== */
+  --color-burgundy: #6e1f24;       /* satter Bordeaux */
   --color-burgundy-deep: #4d161a;
-  --color-burgundy-soft: #8a2c33;
-  --color-gold: #b08a3e;
-  --color-gold-soft: #d8b974;      /* hochheller Gold — für Akzenttext auf dunkel */
-  --color-gold-pale: #ecd8a0;
+  --color-burgundy-soft: #8b2b33;
+  --color-gold: #c19a3a;           /* sauberes Honiggold (nicht Senf) */
+  --color-gold-soft: #e8c870;      /* helles Champagner-Gold für dunkle bg */
+  --color-gold-pale: #f3e2ad;      /* hellster Goldakzent */
 
-  /* === Dunkle Untergrundtöne ========================================= */
-  --color-wood: #1f1109;
-  --color-wood-mid: #281609;
-  --color-wood-soft: #36210f;
+  /* === Dunkle Untergrundtöne (jetzt neutral, nicht braun) ========== */
+  /* "wood" ist namentlich erhalten für Kompatibilität, faktisch ist es
+     jetzt neutrales Charcoal mit minimaler Wärme. */
+  --color-wood: #0d0b06;           /* main dark surface */
+  --color-wood-mid: #15120c;       /* Karten auf dunkel */
+  --color-wood-soft: #1f1b14;      /* Reserve */
 
-  /* === Fonts ========================================================= */
+  /* === Fonts ======================================================= */
   --font-serif: var(--font-playfair), "Playfair Display", "Cormorant Garamond",
     Georgia, "Times New Roman", serif;
   --font-sans: var(--font-inter), -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  /* === Shadows / Easing ============================================== */
-  --shadow-warm: 0 30px 60px -25px rgba(15, 8, 4, 0.6),
-    0 12px 28px -16px rgba(15, 8, 4, 0.4);
-  --shadow-soft: 0 8px 24px -10px rgba(15, 8, 4, 0.28);
-  --shadow-card: 0 1px 0 0 rgba(255, 245, 220, 0.06) inset,
-    0 20px 44px -22px rgba(15, 8, 4, 0.55);
+  /* === Shadows & Easing ============================================ */
+  --shadow-warm: 0 30px 60px -25px rgba(5, 4, 3, 0.6),
+    0 12px 28px -16px rgba(5, 4, 3, 0.4);
+  --shadow-soft: 0 8px 24px -10px rgba(5, 4, 3, 0.28);
+  --shadow-card: 0 1px 0 0 rgba(255, 248, 232, 0.06) inset,
+    0 20px 44px -22px rgba(5, 4, 3, 0.55);
 
   --ease-elegant: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
@@ -95,40 +107,41 @@ p {
   border-radius: 2px;
 }
 
-/* === Paper texture overlay (very subtle) ============================ */
+/* === Paper-Texture-Overlay (sehr subtil) ============================ */
 .paper-grain::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.035;
+  opacity: 0.03;
   mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.14  0 0 0 0 0.10  0 0 0 0 0.06  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0 0.04  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
-/* === Typografische Utilities ======================================== */
+/* === Typografische Utilities ======================================= */
+/* Eyebrow auf hellem Grund — jetzt BURGUND statt Gold.
+   Begründung: Gold/Beige auf Cremeweiß = 2.5:1 (WCAG-Fail bei kleinen
+   Schriften). Burgund auf Cremeweiß = 10:1 (AAA), satt, klassisch. */
 .eyebrow {
   font-family: var(--font-sans);
   font-style: normal;
   font-size: 0.78rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--color-gold);
-  font-weight: 600;
-}
-.eyebrow-bright {
-  color: var(--color-gold-soft);
+  color: var(--color-burgundy);
+  font-weight: 700;
 }
 
-/* Sans-serif Section-Label für dunkle Sektionen (sehr lesbar, modern) */
+/* Variante auf dunklem Grund — sauberes helles Gold */
+.eyebrow-bright,
 .label-bright {
   font-family: var(--font-sans);
-  font-size: 0.82rem;
-  letter-spacing: 0.24em;
+  font-size: 0.78rem;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  font-weight: 700;
   color: var(--color-gold-soft);
+  font-weight: 700;
 }
 
 .text-display {
@@ -138,15 +151,15 @@ p {
   line-height: 1.04;
 }
 
-/* === Text-Shadows für Lesbarkeit auf Bildern ======================== */
+/* === Text-Shadows für Bildhintergründe ============================= */
 .text-shadow-soft {
-  text-shadow: 0 2px 14px rgba(15, 8, 4, 0.5),
-    0 1px 2px rgba(15, 8, 4, 0.4);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55),
+    0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .text-shadow-strong {
-  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.75),
-    0 2px 6px rgba(0, 0, 0, 0.55),
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.8),
+    0 2px 6px rgba(0, 0, 0, 0.6),
     0 0 1px rgba(0, 0, 0, 0.5);
 }
 
@@ -194,12 +207,12 @@ p {
 .btn-primary {
   background: var(--color-burgundy);
   color: var(--color-paper);
-  box-shadow: 0 14px 30px -18px rgba(107, 31, 36, 0.75);
+  box-shadow: 0 14px 30px -18px rgba(110, 31, 36, 0.75);
 }
 .btn-primary:hover {
   background: var(--color-burgundy-deep);
   transform: translateY(-2px);
-  box-shadow: 0 22px 40px -18px rgba(107, 31, 36, 0.85);
+  box-shadow: 0 22px 40px -18px rgba(110, 31, 36, 0.85);
 }
 
 .btn-outline {
@@ -213,11 +226,10 @@ p {
   transform: translateY(-2px);
 }
 
-/* Light-Variante mit deutlich dunklerem Backdrop für Lesbarkeit über Hero */
 .btn-outline-light {
   border-color: var(--color-paper);
   color: var(--color-paper);
-  background: rgba(15, 8, 4, 0.45);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
 }
 .btn-outline-light:hover {
@@ -229,13 +241,13 @@ p {
 
 .btn-cream {
   background: var(--color-paper);
-  color: var(--color-wood);
-  box-shadow: 0 14px 30px -18px rgba(15, 8, 4, 0.55);
+  color: var(--color-ink-strong);
+  box-shadow: 0 14px 30px -18px rgba(5, 4, 3, 0.55);
 }
 .btn-cream:hover {
   background: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 22px 40px -18px rgba(15, 8, 4, 0.65);
+  box-shadow: 0 22px 40px -18px rgba(5, 4, 3, 0.65);
 }
 
 /* === Layout-Primitives ============================================== */
@@ -289,10 +301,10 @@ p {
 .card-elevated {
   background: linear-gradient(
     180deg,
-    rgba(255, 252, 244, 0.95) 0%,
-    rgba(243, 234, 212, 0.82) 100%
+    rgba(255, 253, 246, 0.96) 0%,
+    rgba(236, 228, 203, 0.85) 100%
   );
-  border: 1px solid rgba(15, 10, 6, 0.1);
+  border: 1px solid rgba(10, 9, 7, 0.12);
   box-shadow: var(--shadow-card);
   transition: transform 500ms var(--ease-elegant),
     box-shadow 500ms var(--ease-elegant),
@@ -300,28 +312,28 @@ p {
 }
 .card-elevated:hover {
   transform: translateY(-4px);
-  border-color: rgba(176, 138, 62, 0.55);
-  box-shadow: 0 32px 64px -28px rgba(15, 8, 4, 0.5);
+  border-color: rgba(193, 154, 58, 0.6);
+  box-shadow: 0 32px 64px -28px rgba(5, 4, 3, 0.5);
 }
 
-/* Dunkle Karte — STÄRKERE Tiefe als bisher (war zu nah am wood-Hintergrund) */
+/* Karte auf dunklem Grund — jetzt mit echtem Schwarz (0,0,0) statt Braun */
 .card-dark {
   background: linear-gradient(
     180deg,
-    rgba(8, 4, 2, 0.55) 0%,
-    rgba(8, 4, 2, 0.85) 100%
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.88) 100%
   );
-  border: 1px solid rgba(216, 185, 116, 0.45);
-  box-shadow: 0 1px 0 0 rgba(255, 245, 220, 0.08) inset,
-    0 24px 52px -24px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(232, 200, 112, 0.5);
+  box-shadow: 0 1px 0 0 rgba(255, 248, 232, 0.08) inset,
+    0 24px 52px -24px rgba(0, 0, 0, 0.75);
   transition: transform 500ms var(--ease-elegant),
     border-color 300ms ease, box-shadow 500ms var(--ease-elegant);
 }
 .card-dark:hover {
   transform: translateY(-4px);
-  border-color: rgba(216, 185, 116, 0.85);
-  box-shadow: 0 1px 0 0 rgba(255, 245, 220, 0.12) inset,
-    0 32px 64px -24px rgba(0, 0, 0, 0.8);
+  border-color: rgba(243, 226, 173, 0.9);
+  box-shadow: 0 1px 0 0 rgba(255, 248, 232, 0.12) inset,
+    0 32px 64px -24px rgba(0, 0, 0, 0.85);
 }
 
 /* L-Bracket-Ecken */
@@ -336,7 +348,7 @@ p {
   height: 24px;
   border-color: var(--color-gold);
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 .corner-decor::before {
   top: -6px;
@@ -351,7 +363,7 @@ p {
   border-right: 1px solid;
 }
 
-/* === Section divider — gold ========================================== */
+/* === Section-Divider ================================================ */
 .divider-gilt {
   display: flex;
   align-items: center;
@@ -367,31 +379,30 @@ p {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(176, 138, 62, 0.5) 50%,
+    rgba(193, 154, 58, 0.55) 50%,
     transparent 100%
   );
 }
 
-/* === Hero-Overlay ====================================================
-   DEUTLICH DUNKLER als vorher — Hero-Text muss immer klar lesbar sein. */
+/* === Hero-Overlay — jetzt mit reinem Schwarz statt Braun ============ */
 .hero-vignette {
   background:
     radial-gradient(
       ellipse at center,
-      rgba(8, 4, 2, 0.35) 0%,
-      rgba(8, 4, 2, 0.65) 60%,
-      rgba(8, 4, 2, 0.92) 100%
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.7) 60%,
+      rgba(0, 0, 0, 0.92) 100%
     ),
     linear-gradient(
       180deg,
-      rgba(15, 8, 4, 0.75) 0%,
-      rgba(15, 8, 4, 0.5) 35%,
-      rgba(15, 8, 4, 0.7) 70%,
-      rgba(15, 8, 4, 0.95) 100%
+      rgba(0, 0, 0, 0.78) 0%,
+      rgba(0, 0, 0, 0.5) 35%,
+      rgba(0, 0, 0, 0.72) 70%,
+      rgba(0, 0, 0, 0.95) 100%
     );
 }
 
-/* === Bilder ========================================================== */
+/* === Bilder ========================================================= */
 .image-elegant {
   overflow: hidden;
   position: relative;
@@ -410,7 +421,7 @@ p {
   0%,
   100% {
     transform: translate(-50%, 0);
-    opacity: 0.65;
+    opacity: 0.7;
   }
   50% {
     transform: translate(-50%, 6px);
