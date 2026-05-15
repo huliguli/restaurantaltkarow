@@ -23,6 +23,14 @@ export function MenuList({ sections }: Props) {
             <div className="mt-6 flex justify-center">
               <Ornament />
             </div>
+            {section.note ? (
+              <p
+                className="mt-5 mx-auto max-w-2xl font-serif italic text-burgundy"
+                style={{ fontWeight: 500 }}
+              >
+                {section.note}
+              </p>
+            ) : null}
           </header>
 
           <ul className="mt-12 max-w-3xl mx-auto space-y-9">

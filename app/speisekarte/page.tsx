@@ -72,26 +72,25 @@ export default function SpeisekartePage() {
         </div>
       </section>
 
-      {/* === KLASSIKER-AUSWAHL === */}
+      {/* === SPEISEKARTE === */}
       <section className="section bg-cream-deep relative">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
         <div className="container-wide">
           <Reveal>
             <div className="text-center max-w-2xl mx-auto mb-14">
-              <p className="eyebrow">Eine Auswahl</p>
+              <p className="eyebrow">Unsere Karte</p>
               <h2
                 className="mt-3 font-serif text-3xl sm:text-4xl text-ink-strong"
                 style={{ fontWeight: 700 }}
               >
-                Klassiker des Hauses
+                Hausgemachte Spezialitäten
               </h2>
               <div className="mt-6 flex justify-center">
                 <Ornament />
               </div>
               <p className="mt-7 text-ink leading-relaxed">
-                Eine kleine Vorschau auf die Gerichte, die unsere Gäste seit
-                Jahren wiederkommen lassen. Die vollständige, aktuelle Karte
-                finden Sie im PDF oberhalb.
+                Deutsche Küche, veredelt durch feine osteuropäische Einflüsse —
+                alles aus eigener Küche, mit Zeit und frischen Zutaten zubereitet.
               </p>
             </div>
           </Reveal>
