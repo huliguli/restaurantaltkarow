@@ -74,37 +74,210 @@ Erwartet: `:3000` belegt von wappsite-Node, `:3001` frei. Falls `:3001` belegt �
 
 ## 2. Domain mit VPS verbinden
 
-> ⚠️ Im DNS-Panel der Domain `restaurant-alt-karow.de` **nur die Hosting-relevanten Records ändern** — Mail-Records (MX, SPF, DKIM, DMARC) bleiben unverändert, falls die Domain Mailversand nutzt. Siehe `wappsite/DEPLOYMENT.md` Abschnitt 2.3.1 für die Records, die niemals gelöscht werden dürfen.
+**Aktueller Stand (2026-05):** Die Domain `restaurant-alt-karow.de` ist bei **Wix** registriert. Ein vollständiger Registrar-Transfer ist noch nicht möglich. Vorgehen: **DNS bei Wix umstellen** (Wix bleibt Registrar + DNS-Host), Zertifikat per Let's Encrypt holen. Später dann ggf. vollständiger Transfer (siehe 2.B).
 
-### 2.1 A-Records setzen
+---
 
-Beim DNS-Anbieter der Domain (IONOS, Cloudflare, …):
+### 2.A — AKTUELL: Wix-Domain temporär auf VPS leiten
 
-| Typ | Hostname | Wert               | TTL  |
-| --- | -------- | ------------------ | ---- |
-| A   | `@`      | `<DEINE_VPS_IPV4>` | 3600 |
-| A   | `www`    | `<DEINE_VPS_IPV4>` | 3600 |
+> Ziel: A-Records im Wix-DNS-Panel so umlenken, dass `restaurant-alt-karow.de` und `www.…` auf den IONOS-VPS zeigen. Wix bleibt **Registrar** (Verwaltung der Domain selbst) und **DNS-Host** (Verwaltung der Records) — wir nutzen nur sein DNS-Panel.
 
-Optional, falls IPv6 verfügbar: AAAA-Records analog setzen.
+#### 2.A.1 Wichtig vorab — Wix-spezifische Stolperfallen
 
-Optional empfohlen:
+- **Wenn die Domain bei Wix mit einer Wix-Website verbunden ist** (Domain-„Verbindung"), überschreibt Wix die DNS-Records gerne stillschweigend oder zeigt manuell gesetzte Records nicht an. **Vor** der Umstellung: in Wix den Punkt **„Domain trennen"** ausführen (Wix Dashboard → Domains → Domain auswählen → „What would you like to do?" → **„Point a domain to a different site"** bzw. **„Disconnect from site"**).
+- Wix erlaubt das Editieren von A/CNAME/MX/TXT-Records auch ohne Transfer. Es gibt **kein** Editieren der Nameserver-Delegation, solange die Domain bei Wix registriert ist — wir brauchen das aber gar nicht.
+- Wix-Premium-Pläne stellen automatisch ein SSL-Zertifikat für die Domain bereit. Das bleibt ungenutzt liegen, sobald die DNS-Records auf den VPS zeigen — irrelevant, kein Konflikt mit unserem Let's-Encrypt-Cert.
+- **Mail bei Wix:** Falls Mail-Postfächer (z. B. Google Workspace via Wix verbunden) genutzt werden, **MX-, SPF-, DKIM-, DMARC-Records nicht anrühren**. Nur die `A @`- und `A/CNAME www`-Records werden geändert. Aktuell sind für `restaurant-alt-karow.de` keine eigenen Mail-Postfächer bekannt — vor dem Editieren trotzdem kurz die DNS-Liste in Wix scannen und alles mit Typ `MX`, `TXT (v=spf1 …)` oder `_dmarc` unangetastet lassen.
 
-| Typ | Hostname | Wert                          |
-| --- | -------- | ----------------------------- |
-| CAA | `@`      | `0 issue "letsencrypt.org"`   |
+#### 2.A.2 Schritt 0 — TTL vorab senken (24 – 48 h vorher empfohlen)
 
-### 2.2 Propagation prüfen
+Damit der Cutover möglichst kurze Downtime hat, **vorher** im Wix-DNS-Panel die TTL der bestehenden A-Records auf den kleinstmöglichen Wert ändern (Wix erlaubt typischerweise minimum **5 min** = `300 s` oder `1 h` = `3600 s`):
+
+1. Wix Dashboard → **Domains** → `restaurant-alt-karow.de` → **„Advanced"** bzw. **„DNS Records bearbeiten"**.
+2. A-Record für Host `@` öffnen → TTL auf **5 min** (`300`) reduzieren. Speichern.
+3. CNAME/A-Record für Host `www` analog auf TTL `300`.
+4. **Warten:** 24 – 48 Stunden, bis der bisherige (alte) TTL-Wert in den Caches abgelaufen ist. Danach reagieren spätere Änderungen weltweit innerhalb von ~5 min.
+
+Wenn keine Zeit für Vorlauf bleibt: einfach den nächsten Schritt machen, dann liegt die volle Propagationszeit bei der bisherigen TTL (oft 1 h).
+
+#### 2.A.3 Schritt 1 — Bestandsaufnahme der aktuellen DNS-Records bei Wix
+
+Im Wix-Panel **vor jeder Änderung** Screenshot machen oder die Records abschreiben — falls ein Rollback nötig wird. Typische Wix-Records, die unverändert bleiben:
+
+| Typ | Host | Wert (Beispiel)                    | bleibt? |
+| --- | ---- | ---------------------------------- | ------- |
+| NS  | `@`  | `ns6.wixdns.net` / `ns7.wixdns.net` | ja      |
+| MX  | `@`  | (nur falls Mail bei Wix)            | ja      |
+| TXT | `@`  | `v=spf1 …` (nur falls vorhanden)    | ja      |
+| TXT | `_dmarc` | (falls vorhanden)               | ja      |
+| CNAME | `_domainconnect` | (Wix-intern)              | ja      |
+
+Records, die wir **ändern** (Hosting umlenken):
+
+| Typ   | Host | Wert (alt)               | Wert (neu)            |
+| ----- | ---- | ------------------------ | --------------------- |
+| A     | `@`  | Wix-IP (z. B. `185.230.63.x`) | `<DEINE_VPS_IPV4>` |
+| A oder CNAME | `www` | z. B. CNAME → `…wixdns.net` | A → `<DEINE_VPS_IPV4>` |
+
+#### 2.A.4 Schritt 2 — A-Records auf VPS umstellen
+
+Im Wix-DNS-Panel:
+
+1. **Apex (`@`):**
+   - Bestehenden `A @ <Wix-IP>` öffnen → **Wert** durch `<DEINE_VPS_IPV4>` ersetzen → TTL `300` → speichern.
+   - Falls Wix einen `AAAA @ …`-Record gesetzt hat: entweder löschen oder auf die VPS-IPv6 umstellen (falls IONOS dir eine gegeben hat). IPv4 allein reicht.
+
+2. **`www`-Hostname:**
+   - Existiert ein CNAME `www → ...wixdns.net`? → **Löschen**.
+   - Neuen `A www → <DEINE_VPS_IPV4>` mit TTL `300` anlegen.
+   - Alternativ: CNAME `www → restaurant-alt-karow.de` (Wix erlaubt das in der Regel, ist gleichwertig, hält den Wert automatisch synchron).
+
+3. **CAA-Record (optional, empfohlen) — schützt vor Cert-Missbrauch:**
+   - Typ `CAA`, Host `@`, Wert `0 issue "letsencrypt.org"`, TTL `3600`.
+   - Wix unterstützt CAA-Records in vielen Plänen. Falls die UI das nicht anbietet: weglassen — funktional nicht zwingend.
+
+4. Speichern. Wix zeigt typischerweise einen Hinweis „Connected to external site" — bestätigen.
+
+#### 2.A.5 Schritt 3 — Propagation prüfen
+
+Vom **VPS** oder lokal (Windows-PowerShell akzeptiert `nslookup`):
 
 ```bash
+# Auf dem VPS / Linux / macOS:
 $ dig +short restaurant-alt-karow.de
 $ dig +short www.restaurant-alt-karow.de
+$ dig +short restaurant-alt-karow.de @1.1.1.1   # Cloudflare-Resolver
+$ dig +short restaurant-alt-karow.de @8.8.8.8   # Google-Resolver
 ```
 
-Beide sollten die VPS-IP zurückgeben. Bis zu 1 h Wartezeit ist normal.
+```powershell
+# Lokal Windows:
+nslookup restaurant-alt-karow.de
+nslookup restaurant-alt-karow.de 1.1.1.1
+```
+
+Erwartet: beide Antworten = `<DEINE_VPS_IPV4>`. Solange noch alte Wix-IP zurückkommt, ist die Propagation nicht durch.
+
+Visueller Check weltweit: <https://dnschecker.org/#A/restaurant-alt-karow.de> — sollte überwiegend Grün mit deiner VPS-IP zeigen.
+
+**Faustregel:**
+
+- Bei zuvor reduzierter TTL: ~5 – 10 Minuten.
+- Ohne Vorlauf: bis zu der TTL, die vorher gesetzt war (typischerweise 1 h, im Extremfall 24 h).
+
+Erst weitermachen, wenn `dig` mehrfach (auch über andere Resolver) die VPS-IP zurückgibt.
+
+#### 2.A.6 Schritt 4 — Nginx-Block deployen und Certbot ausführen
+
+Ablauf exakt wie in den Abschnitten 6 und 7 dieser Anleitung — der **Wix-Aspekt spielt für Nginx und Let's Encrypt keine Rolle**. Sobald die A-Records auf den VPS zeigen, ist Let's Encrypt egal, wer das DNS hostet.
+
+Wichtig:
+
+1. **Nginx-Site erst aktivieren, wenn DNS propagiert ist** (sonst gibt Certbot "DNS problem" oder "Connection refused" zurück).
+2. Erstkonfiguration des Nginx-Blocks als **HTTP-only** (Port 80) — wie in Abschnitt 6 angelegt.
+3. `sudo nginx -t && sudo systemctl reload nginx`.
+4. Browser-Test: `http://restaurant-alt-karow.de` → muss die neue Site liefern (noch ohne Schloss).
+5. Certbot ausführen (Abschnitt 7) → Let's Encrypt löst die HTTP-01-Challenge über Port 80 ein, schreibt das Zertifikat und konfiguriert den 443-Block automatisch.
+
+> Let's Encrypt **muss** dafür die Domain via Port 80 erreichen können → UFW: 80 + 443 offen, kein Cloudflare/Wix-Proxy davor (bei reiner DNS-Umlenkung ist das automatisch der Fall).
+
+#### 2.A.7 Schritt 5 — Wix-Website endgültig deaktivieren (optional, sauber)
+
+Wenn die alte Wix-Website nicht mehr aufrufbar sein soll:
+
+1. Wix Dashboard → **Sites** → alte Site → **„Unpublish"** (Veröffentlichung zurücknehmen). Damit erreicht niemand mehr versehentlich die alte Wix-URL `restaurantaltkarow.wixsite.com/...`.
+2. Wix-Premium-Plan kündigen (falls nicht mehr benötigt) — **erst nach dem vollständigen Registrar-Transfer**, da der Plan oft an die Domain-Verwaltung gekoppelt ist. Detail in 2.B.
+
+---
+
+### 2.B — SPÄTER: Vollständiger Domain-Transfer weg von Wix
+
+Wenn du die Domain irgendwann komplett bei Wix herauslöst (z. B. zu IONOS, Cloudflare oder Namecheap), läuft das so ab:
+
+1. **Wix-Domain auf transferfähig stellen:**
+   - Wix Dashboard → Domain → **„Transfer away from Wix"** klicken.
+   - Wix muss die Domain entsperren (Lock entfernen).
+   - **Auth-Code (EPP-Code)** anfordern — Wix mailt ihn an die Registrar-Mail-Adresse.
+   - Wix erlaubt Transfers erst **nach 60 Tagen** seit Registrierung oder letztem Transfer (ICANN-Regel).
+2. **Beim neuen Registrar Transfer initiieren:**
+   - Domain dort als „Transfer" eingeben → Auth-Code eingeben → Domain-Inhaber-Mail bestätigen → Zahlung (verlängert die Domain meist um 1 Jahr).
+3. **Während des Transfers laufen DNS-Records weiter** — keine Downtime, solange die A-Records beim alten Registrar (Wix) **noch zeigen, wohin sie sollen** (also auf deinen VPS).
+4. **Nach erfolgreichem Transfer** (typisch 5 – 7 Tage):
+   - DNS-Verwaltung beim neuen Registrar einrichten → A-Records erneut auf VPS-IP setzen (analog 2.A.4).
+   - **Achtung:** Beim Wechsel des DNS-Hosts können A-Records **zurückgesetzt** werden — Records sofort nach Wechsel kontrollieren.
+   - TTL wieder hochsetzen (`3600` ist normal).
+5. **`A`-Record-Wechsel ist dann trivial** — keine Wartezeit, da bereits korrekt eingestellt.
+
+> Empfehlung: für den Transfer-Zeitraum bei beiden Anbietern die identischen DNS-Records halten — dann kann der Nameserver-Wechsel ohne Downtime ablaufen.
+
+---
+
+### 2.C — Häufige Probleme & Diagnose
+
+| Symptom                                                                  | Ursache                                                                 | Lösung                                                                                                                  |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `dig` liefert weiterhin Wix-IP                                          | DNS-TTL noch nicht abgelaufen; Wix-Cache; lokaler Resolver cached       | Auf öffentlichen Resolver wechseln (`dig … @1.1.1.1`), warten; ggf. lokal `ipconfig /flushdns` (Win) / `resolvectl flush-caches` (Linux) |
+| Wix zeigt geänderten A-Record nicht in der UI                           | Domain noch mit Wix-Site verbunden — Wix maskiert benutzerdefinierte Records | „Disconnect" in Wix ausführen (siehe 2.A.1), dann Records neu setzen                                                    |
+| Wix setzt nach Speichern die A-Records still zurück                     | Auto-DNS-Schutz aktiv für „verbundene" Domains                          | Domain in Wix endgültig auf **„Point to external"** umstellen                                                            |
+| Browser zeigt Wix-Site, aber `curl` zeigt VPS-Site                       | Browser-DNS-Cache oder HSTS-Cache vom alten Wix-Zert                    | Browser-Cache + DNS-Cache leeren; in Inkognito-Tab testen                                                                |
+| Certbot: `Detail: …: DNS problem: NXDOMAIN looking up A for …`          | DNS noch nicht propagiert                                                | `dig` über mehrere Resolver wiederholen; warten                                                                          |
+| Certbot: `Connection refused` auf Port 80                                | UFW blockiert 80; Nginx hört nicht; falscher `server_name`              | `sudo ufw status`, `sudo nginx -t`, `curl -I http://restaurant-alt-karow.de` vom VPS                                     |
+| Certbot: `… too many certificates already issued for this exact set …`  | Let's Encrypt Rate-Limit (5 pro Domain / Woche)                          | `--dry-run` zur Vorbereitung nutzen; sonst eine Woche warten                                                            |
+| Browser zeigt Wix-Splash trotz korrekter DNS                            | Wix-Website noch „published", Wix-CDN hat IP-basiertes Routing          | Wix-Site in Schritt 2.A.7 unpublishen                                                                                    |
+| `www.restaurant-alt-karow.de` lädt nicht, Apex schon                    | `www`-Record vergessen oder nur als CNAME auf alten Wix-Wert            | `dig +short www.restaurant-alt-karow.de` prüfen; A oder CNAME auf VPS umstellen                                          |
+| `mixed content`-Warnungen nach SSL-Cutover                              | Hardcoded `http://`-Links auf der neuen Site                            | Codebase nach `http://` durchsuchen, durch `https://` oder protokollrelativ ersetzen                                     |
+
+#### Mini-Cheatsheet für die Cutover-Stunde
+
+```bash
+# DNS schnell und über mehrere Resolver gegenchecken
+$ for r in 1.1.1.1 8.8.8.8 9.9.9.9; do echo "[$r]"; dig +short @$r restaurant-alt-karow.de; done
+
+# Antwortet der eigene VPS?
+$ curl -I http://restaurant-alt-karow.de
+
+# Nginx-Status & Logs
+$ sudo nginx -t
+$ sudo tail -f /var/log/nginx/restaurantaltkarow.access.log
+
+# Certbot trockentest, bevor man richtig holt
+$ sudo certbot --nginx -d restaurant-alt-karow.de -d www.restaurant-alt-karow.de --dry-run
+```
+
+---
+
+### 2.D — Zeitplan, wenig Downtime
+
+| Zeitpunkt          | Was                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **T − 48 h**       | Wix-TTL für `A @` und `A/CNAME www` auf `300` reduzieren                                                        |
+| **T − 24 h**       | VPS vorbereiten: Projekt unter `/var/www/restaurantaltkarow`, `npm ci && npm run build`, PM2 startet App auf 3001 |
+| **T − 1 h**        | Nginx-Block für `restaurant-alt-karow.de` als HTTP-only anlegen, `nginx -t`, `reload`                          |
+| **T = 0**          | In Wix `A @` und `A/CNAME www` auf VPS-IP umstellen                                                             |
+| **T + 5 – 30 min** | `dig` zeigt VPS-IP; `curl http://restaurant-alt-karow.de` liefert die neue Site                                |
+| **T + 35 min**     | Certbot ausführen → HTTPS aktiv                                                                                 |
+| **T + 1 h**        | Sanity-Check: Browser, `https://www…` → Redirect auf Apex, beide Sites unter SSL, Logs leer                    |
+| **T + 24 h**       | Wix-Site unpublishen (2.A.7); TTL ggf. wieder auf `3600` hochsetzen                                            |
+
+---
 
 ---
 
 ## 3. Projekt auf den Server bringen
+
+> 💡 **Reihenfolge-Tipp:** Schritte 3 – 6 (Projekt, Build, PM2, Nginx HTTP-only) **dürfen und sollen** vor Schritt 2 (DNS-Cutover bei Wix) ausgeführt werden. Vorteil: Die neue Site läuft schon vollständig auf dem VPS, bevor du DNS umstellst — kein Loch zwischen Wix-Aus und neuer Site. Testen lokal vor dem Cutover:
+>
+> ```
+> # auf dem VPS — Hostname per Header faken, DNS umgehen
+> curl -I -H "Host: restaurant-alt-karow.de" http://localhost
+>
+> # lokal in Windows — hosts-Override für privaten Browser-Test
+> # %SystemRoot%\System32\drivers\etc\hosts:
+> # 31.70.80.71  restaurant-alt-karow.de  www.restaurant-alt-karow.de
+> ```
+>
+> Erst nach erfolgreichem Test: DNS bei Wix umstellen (Schritt 2.A.4), dann Certbot (Schritt 7).
+
 
 ### 3.1 Zielordner anlegen
 
@@ -582,12 +755,14 @@ Certbot ist bereits installiert. Nur das Zertifikat anfordern:
 $ sudo certbot --nginx \
     -d restaurant-alt-karow.de \
     -d www.restaurant-alt-karow.de \
-    --redirect --hsts --staple-ocsp \
+    --redirect --hsts \
     -m hello@restaurant-alt-karow.de \
     --agree-tos --no-eff-email
 ```
 
 Wenn die Mail-Adresse `hello@restaurant-alt-karow.de` noch nicht existiert, eine bestehende Adresse verwenden — sie dient nur für Renewal-Warnungen.
+
+> **Hinweis zu `--staple-ocsp`:** Bewusst weggelassen. Let's Encrypt hat 2025 die OCSP-Responder-URL aus neuen Zertifikaten entfernt (Wechsel zu Short-Lived-Certs + CRL). Würde Certbot OCSP-Stapling in den Nginx-Block schreiben, bekäme man bei jedem `nginx -t` eine harmlose `"ssl_stapling" ignored, no OCSP responder URL`-Warnung. Auf diesem VPS tritt das bei der bestehenden wappsite-Site auf — Config funktioniert trotzdem, nur Kosmetik. Bei künftigen Renewals der wappsite-Zertifikate kann man die zwei Zeilen `ssl_stapling on;` / `ssl_stapling_verify on;` aus `/etc/nginx/sites-available/wappsite4you` entfernen, um die Warnung loszuwerden.
 
 Verifizieren:
 
