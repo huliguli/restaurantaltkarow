@@ -8,7 +8,9 @@
  *   cd /var/www/restaurantaltkarow
  *   node scripts/check-nextenv.mjs
  */
-import { loadEnvConfig } from "@next/env";
+// @next/env ist CommonJS — default-Import + Destructuring nötig
+import nextEnv from "@next/env";
+const { loadEnvConfig } = nextEnv;
 
 loadEnvConfig(process.cwd(), false);
 
