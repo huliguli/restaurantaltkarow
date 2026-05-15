@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { SectionHeading } from "@/components/SectionHeading";
 import { Ornament } from "@/components/Ornament";
 import { ReservationCTA } from "@/components/ReservationCTA";
@@ -106,8 +107,87 @@ export default function VeranstaltungenPage() {
         </div>
       </section>
 
+      {/* BUFFET-KONFIGURATOR-TEASER */}
+      <section className="section bg-paper relative">
+        <div className="container-wide">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Buffet-Konfigurator"
+              title="Stellen Sie Ihr Buffet zusammen"
+              description="Wählen Sie Ihre Buffet-Variante und Speisen — online oder als PDF zum Ausdrucken. Wir richten Ihre Feier nach Ihren Vorstellungen aus."
+            />
+          </Reveal>
+
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-7 max-w-5xl mx-auto">
+            <Reveal>
+              <article className="card-elevated p-9 h-full flex flex-col">
+                <p className="eyebrow">Geburtstage · Hochzeiten · Jubiläen</p>
+                <h3
+                  className="mt-3 font-serif text-3xl text-ink-strong"
+                  style={{ fontWeight: 700 }}
+                >
+                  Feier-Buffet
+                </h3>
+                <p className="mt-4 text-ink leading-relaxed">
+                  Drei Varianten ab 26,90 € pro Person. Hauptgerichte, Suppen,
+                  Beilagen, Vorspeisen, Desserts — frei kombinierbar nach Ihrem
+                  Geschmack. Buffet ab 20 Personen.
+                </p>
+                <div className="mt-auto pt-8 flex flex-wrap gap-3">
+                  <Link
+                    href="/veranstaltungen/feierbuffet"
+                    className="btn btn-primary"
+                  >
+                    Online konfigurieren
+                  </Link>
+                  <a
+                    href="/dokumente/feierbuffet.pdf"
+                    download
+                    className="btn btn-outline"
+                  >
+                    PDF herunterladen
+                  </a>
+                </div>
+              </article>
+            </Reveal>
+
+            <Reveal delay={140}>
+              <article className="card-elevated p-9 h-full flex flex-col">
+                <p className="eyebrow">Trauerfeiern</p>
+                <h3
+                  className="mt-3 font-serif text-3xl text-ink-strong"
+                  style={{ fontWeight: 700 }}
+                >
+                  Trauerfeier-Buffet
+                </h3>
+                <p className="mt-4 text-ink leading-relaxed">
+                  Vier Varianten ab 18,50 € pro Person. Diskret, würdig, mit
+                  Eröffnungsgetränken auf Wunsch. Wir nehmen Ihnen die
+                  Organisation in dieser Zeit ab.
+                </p>
+                <div className="mt-auto pt-8 flex flex-wrap gap-3">
+                  <Link
+                    href="/veranstaltungen/trauerfeierbuffet"
+                    className="btn btn-primary"
+                  >
+                    Online konfigurieren
+                  </Link>
+                  <a
+                    href="/dokumente/trauerfeierbuffet.pdf"
+                    download
+                    className="btn btn-outline"
+                  >
+                    PDF herunterladen
+                  </a>
+                </div>
+              </article>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       {/* BILD + TEXT */}
-      <section className="section bg-paper">
+      <section className="section bg-cream-deep">
         <div className="container-wide grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
           <Reveal>
             <div className="relative aspect-[4/3] image-elegant rounded-sm shadow-warm corner-decor">

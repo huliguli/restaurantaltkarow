@@ -42,3 +42,23 @@ next-env.d.ts
 # logs
 logs
 *.log
+
+# === Lokale Quell-/Asset-Ordner (NICHT committen) ===
+# Die fertig aufbereiteten Versionen liegen in public/, die Original-Quellen
+# bleiben nur lokal. Insbesondere Bilder + die rohe Speisekarten-PDF sind groß.
+/Bilder/
+/Speisekarte/
+/Konfigurationsblätter/
+
+# === Geheimnisse ===
+# Plain-text Zugangsdaten (Strato-Mail, Admin-Hash). Niemals committen!
+/secure/
+
+# === SQLite-Datenbank ===
+# Enthält Live-Reservierungen — Backup separat, nicht im Repo.
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+

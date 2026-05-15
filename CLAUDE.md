@@ -59,12 +59,28 @@ restaurantaltkarow/
 ├── app/
 │   ├── layout.tsx              # Root: Header + Footer + Fonts + JSON-LD
 │   ├── page.tsx                # Startseite
-│   ├── globals.css             # Tailwind + @theme + Utility-Klassen
+│   ├── globals.css             # Tailwind + @theme + @layer base/components
 │   ├── icon.svg                # Favicon (App-Router-Konvention)
 │   ├── sitemap.ts              # auto-generiert /sitemap.xml
 │   ├── robots.ts               # auto-generiert /robots.txt
+│   ├── api/
+│   │   ├── buffet-anfrage/route.ts        # POST: Buffet-Config → Mail
+│   │   ├── kontakt/route.ts               # POST: Kontaktformular → Mail
+│   │   ├── reservieren/route.ts           # POST: Reservierung anlegen
+│   │   └── admin/
+│   │       ├── login/route.ts             # POST: Admin-Login + Cookie
+│   │       ├── logout/route.ts            # POST: Cookie löschen
+│   │       └── reservations/[id]/route.ts # PATCH: confirm/decline/propose
+│   ├── admin/
+│   │   ├── layout.tsx                     # Noindex-Wrapper
+│   │   ├── page.tsx                       # Dashboard (Server-Component)
+│   │   └── login/page.tsx
+│   ├── reservieren/page.tsx               # Public Reservierungsformular
 │   ├── speisekarte/page.tsx
-│   ├── veranstaltungen/page.tsx
+│   ├── veranstaltungen/
+│   │   ├── page.tsx
+│   │   ├── feierbuffet/page.tsx
+│   │   └── trauerfeierbuffet/page.tsx
 │   ├── galerie/page.tsx
 │   ├── kontakt/page.tsx
 │   ├── impressum/page.tsx
@@ -78,17 +94,38 @@ restaurantaltkarow/
 │   ├── SectionHeading.tsx      # Eyebrow + H2 + Ornament + Description, tone dark/light
 │   ├── OpeningHours.tsx        # tabellarische Öffnungszeiten
 │   ├── ReservationCTA.tsx      # Burgundy-Section mit radialem Licht, jede Seite
-│   ├── MenuList.tsx            # Speisekarten-Sections mit Dotted-Leader + Hover-Color
-│   └── GalleryGrid.tsx         # responsives Grid mit Aspekt-Variation
+│   ├── MenuList.tsx            # Speisekarten-Sections mit Dotted-Leader
+│   ├── GalleryGrid.tsx         # responsives Grid mit Aspekt-Variation
+│   ├── BuffetForm.tsx          # "use client" — interaktiver Konfigurator (beide Typen)
+│   ├── BuffetPage.tsx          # geteilte Page-Struktur für Feier + Trauerfeier
+│   ├── ContactForm.tsx         # "use client" — Kontaktformular
+│   ├── ReservationForm.tsx     # "use client" — public Reservierungsformular
+│   ├── AdminLoginForm.tsx      # "use client" — Login-Form
+│   ├── AdminLogoutButton.tsx   # "use client"
+│   └── AdminReservationsTable.tsx # "use client" — Dashboard-Tabelle + Aktionen
 ├── content/
-│   ├── menu.ts                 # Speisekarten-Sections + Items (Platzhalter)
-│   └── gallery.ts              # Galerie-Items + Kategorien
+│   ├── menu.ts                 # Speisekarten-Klassiker (Auswahl/Teaser)
+│   ├── gallery.ts              # Galerie-Items + Kategorien
+│   └── buffet.ts               # Buffet-Varianten, Speisen-Listen, Limits, Meta
 ├── lib/
-│   └── siteConfig.ts           # Stammdaten (Name, Adresse, Hours, Räume, Tel)
+│   ├── siteConfig.ts           # Stammdaten (Name, Adresse, Hours, Räume, Tel)
+│   ├── mailer.ts               # Singleton-Nodemailer-Transporter (Strato SMTP)
+│   ├── db.ts                   # SQLite-Singleton + Schema-Init
+│   ├── reservations.ts         # CRUD-Helper für Reservierungen
+│   ├── reservation-rules.ts    # pure Funktionen: Öffnungstage, Slots, Vorlauf
+│   ├── reservation-mail.ts     # 5 Mail-Templates (Text + HTML)
+│   ├── reservation-pdf.ts      # PDF-Bestätigung via pdf-lib
+│   └── admin-auth.ts           # HMAC-Cookie, bcrypt-Vergleich, Session-Helper
 ├── public/
-│   └── images/                 # /aussenansicht.avif, /essensbereich.avif
-├── Bilder/                     # User-Quellordner (außerhalb des Builds, NICHT committen)
+│   ├── images/                 # Hero-/Galerie-Bilder
+│   └── dokumente/              # speisekarte.pdf, feierbuffet.pdf, trauerfeierbuffet.pdf
+├── data/                       # SQLite-Datenbank (gitignored)
+├── Bilder/                     # User-Quellordner (gitignored)
+├── Speisekarte/                # User-Quellordner für Original-PDF (gitignored, 121 MB)
+├── Konfigurationsblätter/      # User-Quellordner für Buffet-PDFs (gitignored)
+├── secure/                     # Plain-text Zugangsdaten + Admin-Hash (gitignored!)
 ├── .env.example
+├── .env.local                  # SMTP-Credentials (gitignored)
 ├── .gitignore
 ├── CLAUDE.md
 ├── DEPLOYMENT.md
@@ -164,6 +201,28 @@ Tokens in `app/globals.css` via `@theme` — automatisch verfügbar als Tailwind
 | `--color-wood-soft`     | `#1f1b14` | Reserve                                              |
 
 > **Naming-Hinweis:** `--color-wood` ist historisch benannt — der HEX-Wert beschreibt jetzt **neutrales Tiefschwarz mit Mikro-Wärme**, nicht braunes Holz. Komponenten-Klassen `bg-wood`, `text-wood` etc. wurden nicht umbenannt (Diff-Sparsamkeit). Beim Lesen einfach „bg-noir / Charcoal" denken.
+
+### Kritischer Bug in Iteration 3+4 — @layer base ist Pflicht
+
+**Symptom:** Trotz `text-paper`-Klasse auf einer `<h1>` blieb die Headline dunkelbraun. Trotz `text-cream` auf einer `<h2>` keine Wirkung. Footer-Brand, Hero-Headline, Section-Titel auf dunklen Sektionen, Räume-Karten — alle ignorierten ihre Tailwind-Color-Klasse.
+
+**Ursache:** Die `globals.css` hatte ihren Base-Reset (`h1, h2, h3, h4 { color: var(--color-ink-strong) }`) **ungelayered** — direkt im Top-Level. In Tailwind v4 schlägt unlayered CSS **alle** `@layer utilities` (also auch `text-paper`, `text-cream`, `text-burgundy` etc.).
+
+**Fix:** Sämtliche Base-Typografie und Resets in `@layer base { ... }` packen. Dann gewinnen Tailwind-Utility-Klassen wieder, wie sie sollen.
+
+```css
+@layer base {
+  body { color: var(--color-ink); }
+  h1, h2, h3, h4 { color: var(--color-ink-strong); ... }
+}
+```
+
+**Konsequenz für Agents:**
+
+- Jede globale Tag-Selector-Regel (h1, h2, body, p, ul, …) muss in `@layer base` liegen.
+- Custom Utility-Klassen (`.btn`, `.eyebrow`, `.text-shadow-strong`) bleiben unlayered — die SOLLEN andere Utilities übersteuern.
+- **Aber: niemals `color: inherit` oder `color: <wert>` in einer unlayered Custom-Klasse setzen, die mit Tailwind-text-*-Utilities kombiniert wird.** Sonst wird die Utility-Klasse stillschweigend ignoriert. Gleicher Bug taucht dadurch auch bei `<a>`-Tags auf: `.link-vintage` hatte ursprünglich `color: inherit` — das überschrieb jede `text-paper`-Klasse auf Nav-Links. Fix: `color: inherit` einfach weglassen (Tailwinds Preflight setzt es bereits in `@layer base` für `<a>`).
+- Wenn nach einer Palette-Änderung Farben nicht durchschlagen → erster Verdacht: ein unlayered Base-Selector oder eine unlayered Custom-Klasse mit `color: …` überschreibt die Utility-Klasse.
 
 ### Eyebrow-Farbe (wichtige Änderung in Iteration 4)
 
@@ -311,6 +370,155 @@ Das aufgeklappte Mobile-Menü ist **immer** im hellen Modus (`bg-paper` + `text-
 
 ---
 
+## 4.5 Mail-Versand (Strato SMTP) + Formulare
+
+### Setup
+
+- **SMTP-Provider:** Strato Webmail
+- **Konto:** `restaurant@mijorent.de` (existiert bereits, Plain-Text-Credentials liegen in `/secure/email.txt` — niemals committen, der Ordner ist gitignored).
+- **Bibliothek:** `nodemailer` (`^6.9.16`) + `@types/nodemailer`
+- **Singleton-Transporter:** `lib/mailer.ts` cached den Transporter pro Server-Prozess. `sendMail({ subject, text, html, replyTo })` ist die einzige öffentliche API.
+- **Env-Variablen** (in `.env.local` lokal, `.env.production` auf VPS — beide gitignored):
+  - `EMAIL_HOST=smtp.strato.de`
+  - `EMAIL_PORT=465`
+  - `EMAIL_USER=restaurant@mijorent.de`
+  - `EMAIL_PASS=…`
+  - `EMAIL_TO=restaurant@mijorent.de` (Empfänger, kann von USER abweichen, Default = USER)
+  - `EMAIL_FROM_NAME=Restaurant Alt-Karow Website`
+
+> **Strato-Eigenheit:** Die `From`-Header-Adresse muss identisch zur Auth-Adresse sein, sonst lehnt der Server den Versand ab. Anzeigename darf abweichen — daher `from: "Restaurant Alt-Karow Website" <restaurant@mijorent.de>`.
+
+> **Domain-Mismatch:** Absender ist `@mijorent.de`, Website ist `restaurant-alt-karow.de`. Mails können dadurch häufiger im Spam landen. Langfristige Lösung: eigene `kontakt@restaurant-alt-karow.de`-Adresse einrichten, sobald Domain transferiert wurde. In ToDos.
+
+### Formulare
+
+| Form | Page | API-Endpoint | Daten | Spam-Schutz |
+| --- | --- | --- | --- | --- |
+| Buffet-Konfigurator (Feier) | `/veranstaltungen/feierbuffet` | `POST /api/buffet-anfrage` | Buffet-Variante + Speisen-Auswahl + Kontaktdaten | Honeypot-Feld `website` |
+| Buffet-Konfigurator (Trauer) | `/veranstaltungen/trauerfeierbuffet` | (gleicher Endpoint, `type: "trauerfeier"`) | + Eröffnungsgetränke | Honeypot |
+| Kontaktformular | `/kontakt` | `POST /api/kontakt` | Name, E-Mail, Telefon, Anlass, Nachricht | Honeypot + Email-Validierung + Length-Cap |
+
+**Konventionen für künftige Formulare:**
+
+1. **Client-Komponente** (`"use client"`) sammelt State, sendet `application/json` per `fetch`.
+2. **API-Route** (`runtime = "nodejs"`) validiert, honeypotted Bots stillschweigend annehmen (200 OK), echte Fehler mit deutscher Klartext-Message als JSON `{ error: string }` mit passendem Status (400/502).
+3. **Mail enthält Plain-Text + HTML** (nodemailer setzt richtigen `multipart`). `replyTo` auf User-Email setzen, damit „Antworten"-Button im Postfach direkt funktioniert.
+4. **Honeypot-Feld** heißt einheitlich `website`, ist via `position:absolute; left:-9999px` versteckt, `tabIndex={-1}`, `autocomplete="off"`. Bots füllen es aus, echte User nie.
+5. **Keine Tracking-Tools, keine externen Form-Services** (Formspree/Typeform etc.) — alles eigene Infrastruktur, DSGVO-freundlich.
+
+### Buffet-Datenmodell
+
+Alle Buffet-Speisen, Varianten, Preise und Limits in **`content/buffet.ts`**. Einziger Ort für Änderungen — `BuffetForm`, `BuffetPage` und der API-Endpoint lesen ausschließlich von dort. Quelle der Wahrheit sind die PDFs unter `/Konfigurationsblätter/`.
+
+`content/buffet.ts` exportiert:
+- `FEIER_VARIANTS` (3 Varianten) / `TRAUER_VARIANTS` (4 Varianten) mit `includes[]`, Preisen, `hat: { hauptgerichte, beilagen, … }`-Flags
+- Gerichtslisten: `HAUPTGERICHTE`, `BEILAGEN`, `SUPPEN`, `VORSPEISEN`, `SCHNITTCHEN`, `DESSERTS`, `EROEFFNUNGSGETRAENKE`
+- `LIMITS`: max-Wählbar-Counts (3/3/2/4)
+- `BUFFET_META`: Title, Intro-Text, PDF-Pfad, E-Mail-Betreff pro Typ
+- `COMMON_HINWEISE`: Sätze, die in jeder Anfrage als „Aside" angezeigt werden
+
+### PDFs unter `/public/dokumente/`
+
+| Datei | Quelle | Status | Hinweis |
+| --- | --- | --- | --- |
+| `feierbuffet.pdf` | `/Konfigurationsblätter/Feierbuffet.pdf` (618 KB) | gepflegt | Update durch Überschreiben |
+| `trauerfeierbuffet.pdf` | `/Konfigurationsblätter/Trauerfeierbuffet.pdf` (697 KB) | gepflegt | Update durch Überschreiben |
+| `speisekarte.pdf` | `/Speisekarte/speisekarte.pdf` (**121 MB**) | **fehlt — muss vor Deploy komprimiert werden** | Original ist zu groß. Auf < 5 MB komprimieren (Adobe / ghostscript / smallpdf), dann hier ablegen |
+
+**Ghostscript-Kompressions-Befehl (Linux/WSL):**
+
+```bash
+gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook \
+   -dNOPAUSE -dQUIET -dBATCH \
+   -sOutputFile=public/dokumente/speisekarte.pdf Speisekarte/speisekarte.pdf
+```
+
+---
+
+## 4.6 Reservierungssystem + Admin-Bereich
+
+### Öffentliche Reservierung — Regeln
+
+- **Route:** `/reservieren` (Header-Button „Reservieren" zeigt hierhin)
+- **Öffnungstage:** Mi – So (Mo + Di geschlossen)
+- **Slots:** 30-Minuten-Schritte ab 12:00
+- **Letzte Reservierung:** max. 2 Stunden vor Schluss
+  - Mi – Sa: 20:00 (Schluss 22:00)
+  - So: 16:00 (Schluss 18:00)
+- **Mindest-Vorlauf:** 2 Öffnungstage (Mo + Di werden übersprungen)
+- **Form-Felder:** Datum, Uhrzeit, Personenzahl, Name, E-Mail, Telefon (opt), Anmerkungen (opt)
+- **Status nach Submit:** `pending` — Gast bekommt Eingangsbestätigung, aber **keine** verbindliche Zusage. Wartet auf Admin-Entscheidung.
+
+Die gesamte Regelogik in `lib/reservation-rules.ts` als pure Funktionen — wird **client UND server** geteilt (Datumsvalidierung im Form + erneut im API-Endpoint).
+
+### Datenbank: SQLite (better-sqlite3)
+
+- **Datei:** `data/restaurantaltkarow.db` (gitignored, lokal + auf VPS separat).
+- **Singleton-Wrapper:** `lib/db.ts`. WAL-Mode für gleichzeitige Reads.
+- **Schema:** Tabelle `reservations` mit `status` ∈ `pending | confirmed | declined | change_proposed`, jeweils `created_at`, `decided_at`, `admin_note`, `proposed_date/time` etc.
+- **DB-Helpers:** `lib/reservations.ts` (`createReservation`, `getReservationById`, `listReservations`, `updateReservationStatus`).
+- **Backups:** sind ein offenes ToDo — die DB enthält Live-Reservierungen, daher regelmäßige Backups auf dem VPS einrichten (z. B. `sqlite3 ... .backup`, oder ganz simpel `cp` des `.db`-Files in einen `/var/backups/`-Ordner via Cron).
+
+### Admin-Bereich
+
+- **Login:** `/admin/login` → POST `/api/admin/login`
+- **Dashboard:** `/admin` (geschützt, Server-Component prüft Session)
+- **Logout:** POST `/api/admin/logout`
+- **Aktionen:** PATCH `/api/admin/reservations/[id]` mit `{ action: 'confirm' | 'decline' | 'propose', adminNote?, proposedTime? }`
+
+#### Auth
+
+Single-Admin-System mit HMAC-signiertem Session-Cookie. Kein externes Auth-Framework.
+
+- **Credentials:** in `.env.local` / `.env.production`:
+  - `ADMIN_USERNAME` = `restaurant_mijorent`
+  - `ADMIN_PASSWORD_HASH` = bcrypt-Hash (Klartext-Passwort kennt nur der User — in `/secure/admin.txt` lokal)
+  - `ADMIN_SESSION_SECRET` = zufälliger 32-Byte-Hex-String (HMAC-Key)
+- **Login-Flow:** username gegen `ADMIN_USERNAME` per Vergleich, Passwort gegen `ADMIN_PASSWORD_HASH` per `bcryptjs.compare`. Bei Erfolg: HTTP-only signed Cookie `admin_session=<base64payload>.<hmac>` mit 24h TTL.
+- **Session-Check:** `getAdminSession()` aus `lib/admin-auth.ts` in jeder Admin-Server-Component oder API-Route aufrufen. Bei `null` → `redirect("/admin/login")` bzw. 401.
+- **Bei Wechsel von `ADMIN_SESSION_SECRET`** werden alle bestehenden Sessions sofort ungültig — praktisch als „kill switch".
+
+#### Aktionen im Detail
+
+| Aktion | Effekt im DB-Status | E-Mail an Gast | PDF? |
+| --- | --- | --- | --- |
+| Bestätigen | `confirmed` | Bestätigungsmail | ✅ PDF im Anhang (`buildReservationPdf`) |
+| Ablehnen | `declined` | Absagemail (mit optionaler Begründung) | – |
+| Änderung vorschlagen | `change_proposed` | Alternativvorschlag-Mail mit der neuen Uhrzeit | – |
+
+Die Alternativzeit muss am **gleichen Tag** wie die Original-Reservierung liegen und im erlaubten Buchungsfenster (Slot-Validierung wie beim Public-Form).
+
+Bei Bestätigung wird das PDF zur Laufzeit generiert (`lib/reservation-pdf.ts`, via `pdf-lib`), kein Disk-Storage.
+
+### Mail-Templates (Reservierungen)
+
+Alle in `lib/reservation-mail.ts`:
+
+- `pendingGuestMail(r)` — Eingangsbestätigung
+- `confirmedGuestMail(r)` — verbindliche Bestätigung (PDF kommt extra)
+- `declinedGuestMail(r, adminNote)` — Absage
+- `proposedGuestMail(r, proposedTime, adminNote)` — Alternative
+- `internalNewReservationMail(r)` — interne Benachrichtigung mit Link zum Admin
+
+Alle Mails: Plain-Text + HTML, mit Restaurant-Signatur, korrekter Bordeaux/Gold-Optik, klassischer Restaurant-Briefkopf-Stil.
+
+### PDF-Bestätigung
+
+`lib/reservation-pdf.ts` baut eine elegante A4-PDF mit:
+
+- Restaurant-Kopfzeile mit goldener Trennlinie
+- „Reservierungsbestätigung" + Untertitel
+- Details-Box mit Datum, Uhrzeit, Personen, Gast
+- Optionale Anmerkung
+- Hinweise (Stornierung, Verspätung)
+- Adresse + Tel im Footer
+- Reservierungs-Nr. (zero-padded), Bestätigungsdatum
+- Linker Burgundy-Akzentbalken
+
+Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
+
+---
+
 ## 5. Server / Deployment — Kerninfo
 
 > Detaillierte Schritt-für-Schritt-Anleitung: `DEPLOYMENT.md`.
@@ -419,13 +627,19 @@ Das aufgeklappte Mobile-Menü ist **immer** im hellen Modus (`bg-paper` + `text-
 
 ## 9. Bekannte offene Punkte / nächste Schritte
 
-- [ ] **Inhalte vom Betreiber finalisieren:** Speisekarte (`content/menu.ts`) durch echte Karte ersetzen — aktuelle Werte sind Platzhalter mit plausiblen Preisen.
+- [ ] **Speisekarte als PDF komprimieren & ablegen** unter `public/dokumente/speisekarte.pdf` (Original 121 MB → Ziel < 5 MB). Aktuell verlinkt die Seite auf einen 404-Pfad.
+- [ ] **`content/menu.ts`** (Klassiker-Teaser) bleibt zur Vorschau, kann bei Bedarf aktualisiert werden, sobald die echte Karte feststeht.
 - [ ] **Impressum** vervollständigen (verantwortliche Person, ggf. USt-IdNr.).
-- [ ] **Datenschutzerklärung** anwaltlich prüfen lassen.
-- [ ] **Mehr Bilder** in `public/images/` ablegen und in `content/gallery.ts` referenzieren (besonders: Speisen, Innenraum-Detail, Terrasse, Feier-Settings). Aktuell nur 2 Bilder.
-- [ ] **Echte Telefonnummer / E-Mail** verifizieren (`lib/siteConfig.ts`). E-Mail-Feld ist leer — könnte für Kontaktformular gebraucht werden.
-- [ ] **Optional: Kontaktformular** mit serverseitiger Mail-Versand (analog wappsite IONOS-SMTP) — würde `app/api/contact/route.ts` + `.env.production` erfordern.
-- [ ] **OG-Image-Variante** für Social Sharing (1200×630, mit Logo/Tagline). Aktuell nutzen wir die Außenansicht im 16:9-Crop, was funktioniert, aber nicht optimal ist.
+- [ ] **Datenschutzerklärung** anwaltlich prüfen lassen — vor Live-Gang besonders, weil jetzt Formulare personenbezogene Daten verarbeiten (Kontakt, Buffet-Anfragen).
+- [ ] **Mehr Bilder** in `public/images/` ablegen und in `content/gallery.ts` referenzieren.
+- [ ] **Echte Telefonnummer / E-Mail** verifizieren (`lib/siteConfig.ts`).
+- [ ] **Eigene Absender-Adresse** `kontakt@restaurant-alt-karow.de` einrichten, sobald Domain transferiert ist — aktuell sendet die Site über `restaurant@mijorent.de`, was die Spam-Wahrscheinlichkeit erhöht (Domain-Mismatch).
+- [ ] **E-Mail-Versand testen:** lokal mit `npm run dev` ein Buffet-Formular, eine Kontaktanfrage UND eine Reservierung absenden, im Postfach prüfen. Vor Live-Gang Pflicht.
+- [ ] **`.env.production` auf VPS** anlegen mit SMTP- UND Admin-Werten (`ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `DATABASE_PATH=/var/www/restaurantaltkarow/data/restaurantaltkarow.db`), `chmod 600`. Sonst funktionieren weder Mail-Versand noch Admin-Login.
+- [ ] **SQLite-Datenbank-Backup** einrichten auf dem VPS — Cron, z. B. täglich `cp data/*.db /var/backups/restaurantaltkarow/`. DB enthält Live-Reservierungen.
+- [ ] **Reservierungssystem auf Echtfälle testen:** Anfrage → Eingangs-Mail → Admin bestätigen → PDF-Mail prüfen. Dann Absage und Alternativ-Vorschlag testen.
+- [ ] **Optional: Reservierungs-Verwaltung erweitern** — Kalender-View, Wochenübersicht, Auslastung pro Slot, Kapazitätslimits (z. B. max. 60 Pers. gleichzeitig). Aktuell rein Listen-basiert.
+- [ ] **OG-Image-Variante** für Social Sharing.
 - [ ] **GitHub-Repo** anlegen, initialen Commit (durch den User).
 - [ ] **DNS-Umlenkung bei Wix** durchführen — siehe DEPLOYMENT.md §2.A. Vorher: TTL auf 300 s, Domain bei Wix von Wix-Site trennen. Records: `A @` und `A www` → VPS-IPv4.
 - [ ] **Erstes Deployment** durchführen (siehe `DEPLOYMENT.md`).

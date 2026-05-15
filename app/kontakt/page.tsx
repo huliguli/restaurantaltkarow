@@ -3,6 +3,7 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { OpeningHours } from "@/components/OpeningHours";
 import { Ornament } from "@/components/Ornament";
 import { Reveal } from "@/components/Reveal";
+import { ContactForm } from "@/components/ContactForm";
 import { siteConfig } from "@/lib/siteConfig";
 
 export const metadata: Metadata = {
@@ -109,6 +110,38 @@ export default function KontaktPage() {
                 Bei Veranstaltungen können die Zeiten abweichen. Wir empfehlen
                 für den Wochenend-Abend eine Reservierung im Voraus.
               </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* KONTAKTFORMULAR */}
+      <section className="section bg-paper-deep/40 relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
+        <div className="container-wide relative">
+          <Reveal>
+            <div className="text-center max-w-2xl mx-auto mb-12">
+              <p className="eyebrow">Nachricht senden</p>
+              <h2
+                className="mt-3 font-serif text-3xl sm:text-4xl text-ink-strong"
+                style={{ fontWeight: 700 }}
+              >
+                Schreiben Sie uns direkt
+              </h2>
+              <div className="mt-6 flex justify-center">
+                <Ornament />
+              </div>
+              <p className="mt-7 text-ink leading-relaxed">
+                Eilige Reservierungen am besten telefonisch — für alles andere
+                freuen wir uns über Ihre Nachricht. Wir antworten in der Regel
+                innerhalb eines Werktages.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={140}>
+            <div className="max-w-3xl mx-auto bg-paper p-8 sm:p-12 border border-ink/10 shadow-soft">
+              <ContactForm />
             </div>
           </Reveal>
         </div>

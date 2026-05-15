@@ -81,12 +81,12 @@ export function Header() {
               </Link>
             );
           })}
-          <a
-            href={`tel:${siteConfig.phoneHref}`}
+          <Link
+            href="/reservieren"
             className={overHero ? "btn btn-cream" : "btn btn-primary"}
           >
             Reservieren
-          </a>
+          </Link>
         </nav>
 
         <button
@@ -131,11 +131,17 @@ export function Header() {
               {item.label}
             </Link>
           ))}
-          <a
-            href={`tel:${siteConfig.phoneHref}`}
+          <Link
+            href="/reservieren"
             className="btn btn-primary self-start mt-3"
           >
-            Reservieren · {siteConfig.phone}
+            Reservieren
+          </Link>
+          <a
+            href={`tel:${siteConfig.phoneHref}`}
+            className="text-sm text-ink-strong link-vintage mt-1"
+          >
+            Oder telefonisch: {siteConfig.phone}
           </a>
         </nav>
       </div>

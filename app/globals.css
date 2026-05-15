@@ -54,57 +54,67 @@
   --ease-elegant: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* ============================================================
+   BASE-LAYER — MUSS in @layer base liegen!
+   Sonst überschreibt unsere h1/h2-Default-Farbe (--color-ink-strong)
+   die Tailwind-Utility-Klassen wie text-paper, text-cream etc.,
+   weil unlayered CSS in Tailwind v4 höher priorisiert ist als
+   @layer utilities. Das war der Bug, warum Headlines auf dunklem
+   Hintergrund trotz text-paper-Klasse braun blieben.
+   ============================================================ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
 
-html {
-  scroll-behavior: smooth;
-}
+  html {
+    scroll-behavior: smooth;
+  }
 
-body {
-  font-family: var(--font-sans);
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-  line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  font-feature-settings: "kern", "liga", "calt";
-}
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern", "liga", "calt";
+  }
 
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-serif);
-  font-weight: 600;
-  letter-spacing: -0.012em;
-  color: var(--color-ink-strong);
-  line-height: 1.12;
-}
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    color: var(--color-ink-strong);
+    line-height: 1.12;
+  }
 
-p {
-  text-wrap: pretty;
-}
+  p {
+    text-wrap: pretty;
+  }
 
-::selection {
-  background: var(--color-burgundy);
-  color: var(--color-paper);
-}
+  ::selection {
+    background: var(--color-burgundy);
+    color: var(--color-paper);
+  }
 
-:focus-visible {
-  outline: 2px solid var(--color-gold);
-  outline-offset: 3px;
-  border-radius: 2px;
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
 }
 
 /* === Paper-Texture-Overlay (sehr subtil) ============================ */
@@ -273,10 +283,13 @@ p {
 }
 
 /* === Links ========================================================== */
+/* .link-vintage setzt KEIN `color` — Tailwinds Preflight kümmert sich darum
+   (a { color: inherit } in @layer base). Würden wir hier color setzen,
+   würde es als unlayered Regel jede text-*-Utility-Klasse schlagen — siehe
+   den @layer-Bug in der CLAUDE.md. */
 .link-vintage {
   position: relative;
   text-decoration: none;
-  color: inherit;
   padding-bottom: 2px;
 }
 .link-vintage::after {
