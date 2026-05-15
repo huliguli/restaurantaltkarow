@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Generiert einen bcrypt-Hash für ein Klartext-Passwort.
- * Benutzung:
- *   node scripts/hash-password.mjs <klartext-passwort>
- *   npm run admin:hash -- <klartext-passwort>
+ * Generiert einen bcrypt-Hash und gibt ihn EXAKT in dem Format aus,
+ * das Next.js' Env-Loader (@next/env mit dotenv-expand) korrekt
+ * interpretiert: jedes $ ist mit Backslash escapet.
  *
- * Den ausgegebenen Hash dann in .env.local (lokal) UND .env.production
- * (VPS) als ADMIN_PASSWORD_HASH eintragen, danach pm2 reload mit --update-env.
+ *   ADMIN_PASSWORD_HASH=\$2a\$12\$abc...
+ *
+ * Ohne diese Escapes würde dotenv-expand "$2a", "$12" etc. als
+ * Variable-Referenzen interpretieren und mit Leerstrings ersetzen —
+ * der Hash wäre kaputt, bcrypt.compare gäbe false zurück → Login schlägt fehl.
  */
 import bcrypt from "bcryptjs";
 
@@ -16,21 +18,25 @@ if (!password) {
   console.error("FEHLT: Passwort als Argument.");
   console.error("");
   console.error("Benutzung:");
-  console.error('  node scripts/hash-password.mjs "MeinNeuesPasswort"');
+  console.error('  npm run admin:hash -- "MeinNeuesPasswort"');
   console.error("");
   process.exit(1);
 }
 
 const hash = bcrypt.hashSync(password, 12);
+const escaped = hash.replace(/\$/g, "\\$");
+
 console.log("");
-console.log("✓ Bcrypt-Hash generiert.");
+console.log("Bcrypt-Hash generiert (60 Zeichen).");
 console.log("");
-console.log("In .env.local (lokal) und .env.production (VPS) eintragen:");
+console.log("In .env.production (und .env.local) eintragen — EXAKT so,");
+console.log("MIT den Backslashes und OHNE Quotes:");
 console.log("");
-console.log(`ADMIN_PASSWORD_HASH="${hash}"`);
+console.log(`ADMIN_PASSWORD_HASH=${escaped}`);
 console.log("");
-console.log("Hinweis: doppelte Anführungszeichen sind wichtig — der Hash");
-console.log("enthält Dollarzeichen, die ohne Quotes Probleme machen können.");
+console.log("Die \\$ sind nötig, damit Next.js' Env-Loader (@next/env mit");
+console.log("dotenv-expand) die $-Zeichen NICHT als Variable-Referenzen");
+console.log("interpretiert. Ohne diese Escapes wäre der Hash beim Laden kaputt.");
 console.log("");
 console.log("Auf dem VPS nach Eintrag:");
 console.log("  pm2 reload restaurantaltkarow --update-env");
