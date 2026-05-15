@@ -22,18 +22,21 @@ export default function DatenschutzPage() {
           </p>
 
           <div>
-            <h2 className="font-serif text-2xl text-ink">
+            <h2 className="font-serif text-2xl text-ink-strong" style={{ fontWeight: 700 }}>
               1. Verantwortlicher
             </h2>
             <p className="mt-3">
               Verantwortlich für die Datenverarbeitung auf dieser Website ist:
               <br />
-              {siteConfig.name}
+              Mijorent GmbH
               <br />
-              {siteConfig.address.street}, {siteConfig.address.zip}{" "}
-              {siteConfig.address.city}
+              Vertreten durch: Michael Durnovtsev
+              <br />
+              Mahlsdorfer Straße 61b, 15366 Hoppegarten
               <br />
               Telefon: {siteConfig.phone}
+              <br />
+              Handelsregister: HRB 21236 FF, Amtsgericht Frankfurt (Oder)
             </p>
           </div>
 
