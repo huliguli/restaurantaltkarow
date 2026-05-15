@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "admin:hash": "node scripts/hash-password.mjs",
+    "admin:check": "node scripts/check-admin-auth.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
