@@ -4,7 +4,7 @@ export const siteConfig = {
   tagline: "Neuer Geschmack am vertrauten Ort",
   description:
     "Restaurant Alt-Karow in Berlin — deutsche Küche mit osteuropäischen Akzenten, hausgemacht, herzlich, in gemütlicher Atmosphäre. Reservierungen unter +49 30 94209445.",
-  url: "https://www.restaurant-alt-karow.de",
+  url: "https://www.restaurant-alt-karow.berlin",
   phone: "+49 30 94209445",
   phoneHref: "+493094209445",
   email: "",

@@ -125,7 +125,7 @@ function buildHtml(p: Payload): string {
 
       <p style="margin-top: 24px; color: #5a5446; font-size: 12px;">
         Diese E-Mail wurde automatisch über das Anfrageformular auf
-        restaurant-alt-karow.de erzeugt.
+        restaurant-alt-karow.berlin erzeugt.
       </p>
     </div>
   `;

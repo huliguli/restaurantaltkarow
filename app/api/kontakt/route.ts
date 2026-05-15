@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   const anlass = payload.anlass?.trim() || "Allgemeine Anfrage";
 
   const text = [
-    `Neue Nachricht über das Kontaktformular auf restaurant-alt-karow.de.`,
+    `Neue Nachricht über das Kontaktformular auf restaurant-alt-karow.berlin.`,
     "",
     `Anlass:   ${anlass}`,
     `Name:     ${payload.name}`,

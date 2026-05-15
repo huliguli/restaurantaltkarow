@@ -388,7 +388,7 @@ Das aufgeklappte Mobile-Menü ist **immer** im hellen Modus (`bg-paper` + `text-
 
 > **Strato-Eigenheit:** Die `From`-Header-Adresse muss identisch zur Auth-Adresse sein, sonst lehnt der Server den Versand ab. Anzeigename darf abweichen — daher `from: "Restaurant Alt-Karow Website" <restaurant@mijorent.de>`.
 
-> **Domain-Mismatch:** Absender ist `@mijorent.de`, Website ist `restaurant-alt-karow.de`. Mails können dadurch häufiger im Spam landen. Langfristige Lösung: eigene `kontakt@restaurant-alt-karow.de`-Adresse einrichten, sobald Domain transferiert wurde. In ToDos.
+> **Domain-Mismatch:** Absender ist `@mijorent.de`, Website ist `restaurant-alt-karow.berlin`. Mails können dadurch häufiger im Spam landen. Langfristige Lösung: eigene `kontakt@restaurant-alt-karow.berlin`-Adresse einrichten, sobald Domain transferiert wurde. In ToDos.
 
 ### Formulare
 
@@ -525,9 +525,9 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 
 | Schlüsselwert        | Wert                                                  |
 | -------------------- | ----------------------------------------------------- |
-| Domain               | `restaurant-alt-karow.de` (+ `www.` Redirect → Apex)  |
-| Domain-Registrar     | **Wix** (Stand 2026-05) — voller Transfer noch nicht möglich |
-| DNS-Host             | **Wix DNS** (bis Transfer) — A-Records werden dort gepflegt |
+| Domain               | `restaurant-alt-karow.berlin` (+ `www.` Redirect → Apex)  |
+| Domain-Registrar     | offen — `.berlin` wird **nicht** von Wix angeboten (Stand 2026-05). Wahrscheinlich INWX, IONOS oder Cloudflare. |
+| DNS-Host             | beim Registrar — A-Records direkt setzen (siehe DEPLOYMENT.md §2.B) |
 | VPS                  | IONOS, Ubuntu 24.04 LTS (geteilt mit wappsite4you.de) |
 | Server-Pfad          | `/var/www/restaurantaltkarow`                         |
 | User                 | `deploy` (sudo)                                       |
@@ -544,7 +544,7 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 - `pm2 startup systemd` wurde einmalig unter User `deploy` durchgeführt. Für jede neue App reicht `pm2 save`.
 - **`pm2 unstartup`** darf niemals ohne Absicht ausgeführt werden.
 - Beide Sites teilen sich denselben Nginx-Prozess, dieselbe Firewall, dasselbe `certbot.timer`, denselben PM2-systemd-Service.
-- **Domain-Status:** `restaurant-alt-karow.de` ist bei **Wix** registriert (Registrar + DNS-Host). Voller Transfer aktuell nicht möglich. Strategie: Wix DNS-Panel verwenden, dort `A @` + `A/CNAME www` auf VPS-IPv4 umlenken (siehe `DEPLOYMENT.md §2.A`). SSL via Let's Encrypt funktioniert unabhängig vom Registrar — Wix-eigenes SSL-Cert bleibt nutzlos liegen, kein Konflikt. Wichtig: Domain in Wix vorher von der Wix-Website **trennen** („Disconnect"/„Point to external"), sonst überschreibt Wix manuell gesetzte DNS-Records. Vor dem Cutover TTL für 24 – 48 h auf 300 s reduzieren. MX/SPF/DKIM/DMARC-Records **nicht anrühren**, falls vorhanden. Vollständiger Registrar-Transfer als künftiges ToDo dokumentiert (`§2.B` in DEPLOYMENT.md).
+- **Domain-Status:** `restaurant-alt-karow.berlin` ist die finale Domain. `.berlin` wird **nicht** von Wix angeboten, daher liegt sie bei einem anderen Registrar (INWX, IONOS, Cloudflare o. ä.). DNS-Records werden direkt beim Registrar gesetzt (siehe `DEPLOYMENT.md §2.B`), kein Umweg über Wix nötig. SSL via Let's Encrypt funktioniert unabhängig vom Registrar. — Frühere Iterationen dieses Dokuments gingen von einer `.de`-Domain bei Wix aus; die entsprechenden Abschnitte in `DEPLOYMENT.md §2.A` sind nur noch für den Fall relevant, dass tatsächlich noch eine Wix-Domain involviert ist.
 - **Bekannte harmlose Warnung beim `nginx -t`:** `"ssl_stapling" ignored, no OCSP responder URL in the certificate "/etc/letsencrypt/live/wappsite4you.de/fullchain.pem"`. Grund: Let's Encrypt hat 2025 OCSP-Responder-URLs aus neuen Certs entfernt. Die `ssl_stapling on;` / `ssl_stapling_verify on;` Direktiven in der wappsite-Nginx-Config sind veraltet, aber funktional unschädlich (`test is successful` kommt trotzdem). Für die neue restaurantaltkarow-Site daher `--staple-ocsp` beim Certbot-Aufruf **weggelassen**. Falls Cleanup gewünscht: zwei Zeilen aus `/etc/nginx/sites-available/wappsite4you` entfernen → reload.
 
 ### PM2 / Port-Konvention auf diesem VPS
@@ -552,7 +552,7 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 | Projekt                  | Port   | PM2-Name             | Status         |
 | ------------------------ | ------ | -------------------- | -------------- |
 | wappsite4you.de          | `3000` | `wappsite4you`       | aktiv          |
-| restaurant-alt-karow.de  | `3001` | `restaurantaltkarow` | dieses Projekt |
+| restaurant-alt-karow.berlin  | `3001` | `restaurantaltkarow` | dieses Projekt |
 | (mxprotec)               | `3002` | `mxprotec`           | reserviert     |
 | (mijocatering)           | `3003` | `mijocatering`       | reserviert     |
 
@@ -633,7 +633,7 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 - [ ] **Datenschutzerklärung** anwaltlich prüfen lassen — vor Live-Gang besonders, weil jetzt Formulare personenbezogene Daten verarbeiten (Kontakt, Buffet-Anfragen).
 - [ ] **Mehr Bilder** in `public/images/` ablegen und in `content/gallery.ts` referenzieren.
 - [ ] **Echte Telefonnummer / E-Mail** verifizieren (`lib/siteConfig.ts`).
-- [ ] **Eigene Absender-Adresse** `kontakt@restaurant-alt-karow.de` einrichten, sobald Domain transferiert ist — aktuell sendet die Site über `restaurant@mijorent.de`, was die Spam-Wahrscheinlichkeit erhöht (Domain-Mismatch).
+- [ ] **Eigene Absender-Adresse** `kontakt@restaurant-alt-karow.berlin` einrichten, sobald Domain transferiert ist — aktuell sendet die Site über `restaurant@mijorent.de`, was die Spam-Wahrscheinlichkeit erhöht (Domain-Mismatch).
 - [ ] **E-Mail-Versand testen:** lokal mit `npm run dev` ein Buffet-Formular, eine Kontaktanfrage UND eine Reservierung absenden, im Postfach prüfen. Vor Live-Gang Pflicht.
 - [ ] **`.env.production` auf VPS** anlegen mit SMTP- UND Admin-Werten (`ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `DATABASE_PATH=/var/www/restaurantaltkarow/data/restaurantaltkarow.db`), `chmod 600`. Sonst funktionieren weder Mail-Versand noch Admin-Login.
 - [ ] **SQLite-Datenbank-Backup** einrichten auf dem VPS — Cron, z. B. täglich `cp data/*.db /var/backups/restaurantaltkarow/`. DB enthält Live-Reservierungen.
@@ -641,10 +641,9 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 - [ ] **Optional: Reservierungs-Verwaltung erweitern** — Kalender-View, Wochenübersicht, Auslastung pro Slot, Kapazitätslimits (z. B. max. 60 Pers. gleichzeitig). Aktuell rein Listen-basiert.
 - [ ] **OG-Image-Variante** für Social Sharing.
 - [ ] **GitHub-Repo** anlegen, initialen Commit (durch den User).
-- [ ] **DNS-Umlenkung bei Wix** durchführen — siehe DEPLOYMENT.md §2.A. Vorher: TTL auf 300 s, Domain bei Wix von Wix-Site trennen. Records: `A @` und `A www` → VPS-IPv4.
-- [ ] **Erstes Deployment** durchführen (siehe `DEPLOYMENT.md`).
-- [ ] **Wix-Website unpublishen** nach erfolgreichem Cutover (verhindert Verwechslungen).
-- [ ] **Vollständiger Domain-Transfer** weg von Wix (sobald die Transfer-Sperre fällt — ICANN 60-Tage-Frist beachten). Ziel-Registrar offen (IONOS-Domain-Panel würde Domain-Verwaltung in dasselbe Konto wie wappsite4you.de bringen — pragmatisch). Vorgehen: DEPLOYMENT.md §2.B.
+- [ ] **DNS für `restaurant-alt-karow.berlin`** beim Registrar setzen — siehe DEPLOYMENT.md §2.B. Records: `A @` + `A www` → `31.70.80.71`, optional CAA `0 issue "letsencrypt.org"`.
+- [ ] **Erstes Deployment** abschließen (siehe DEPLOYMENT.md).
+- [ ] **Migration zu Prisma** als ORM (statt direktem better-sqlite3). Vorteile: Schema-Migrations-Files versioniert, Type-Safety durch generiertes Schema, einfachere Wartung. Refactor wurde im letzten Turn geplant, aber zugunsten akuter Themen (Domain, Audit) verschoben. Touch-Points: `lib/db.ts`, `lib/reservations.ts`, alle Consumer mit `r.reservation_date` → `r.reservationDate` (camelCase via `@map`). Migration via `prisma migrate dev --name init` lokal, `prisma migrate deploy` auf VPS. `DATABASE_URL=file:./data/...` statt `DATABASE_PATH`.
 - [ ] **Bei erstem Deploy:** prüfen, ob `pm2-logrotate` bereits VPS-weit aktiv ist; sonst einmalig installieren (siehe DEPLOYMENT.md 5.7).
 - [ ] **Sobald weitere Projekte (mxprotec/mijocatering) live gehen:** Port-Tabelle in Abschnitt 5 auf Status „aktiv" aktualisieren.
 
@@ -662,15 +661,15 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 | Server-Projektroot                     | `/var/www/restaurantaltkarow`                                        |
 | Server-Logs                            | `/var/log/restaurantaltkarow/`                                       |
 | Nginx-Config (Server)                  | `/etc/nginx/sites-available/restaurantaltkarow`                      |
-| Let's-Encrypt-Cert (Server)            | `/etc/letsencrypt/live/restaurant-alt-karow.de/`                     |
+| Let's-Encrypt-Cert (Server)            | `/etc/letsencrypt/live/restaurant-alt-karow.berlin/`                     |
 | User-Memory (Cross-Session-Kontext)    | `C:\Users\PC\.claude\projects\C--Users-PC\memory\MEMORY.md`          |
-| Referenz-Live-Website (alt)            | https://www.restaurant-alt-karow.de/                                 |
+| Referenz-Live-Website (alt)            | https://www.restaurant-alt-karow.berlin/                                 |
 
 ---
 
 ## 11. Verhältnis zur alten Website
 
-Die bestehende Live-Website `www.restaurant-alt-karow.de` (Stand 2026) wurde inhaltlich als Referenz analysiert — Adresse, Öffnungszeiten, Räume, Tagline „Neuer Geschmack am vertrauten Ort" stammen daher. **Visuell und technisch** ist die neue Site eine komplette Neuentwicklung; nichts wurde kopiert.
+Die bestehende Live-Website `www.restaurant-alt-karow.berlin` (Stand 2026) wurde inhaltlich als Referenz analysiert — Adresse, Öffnungszeiten, Räume, Tagline „Neuer Geschmack am vertrauten Ort" stammen daher. **Visuell und technisch** ist die neue Site eine komplette Neuentwicklung; nichts wurde kopiert.
 
 ---
 

@@ -14,7 +14,7 @@
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.5.0",
     "next": "^16.2.6",
-    "nodemailer": "^6.9.16",
+    "nodemailer": "^8.0.7",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
@@ -30,5 +30,8 @@
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.4",
     "typescript": "^5.5.4"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }

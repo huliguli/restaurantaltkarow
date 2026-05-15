@@ -1,4 +1,4 @@
-# Deployment-Anleitung: restaurant-alt-karow.de auf demselben VPS wie wappsite4you.de
+# Deployment-Anleitung: restaurant-alt-karow.berlin auf demselben VPS wie wappsite4you.de
 
 > Schritt-für-Schritt-Anleitung für das **parallele Deployment** einer zweiten Next.js-Website auf einem bestehenden Ubuntu 24.04 VPS, auf dem bereits `wappsite4you.de` läuft. Nutzt die gleiche Infrastruktur: Nginx Reverse Proxy, PM2, Let's Encrypt.
 
@@ -7,7 +7,7 @@
 ```
 Internet → DNS
             ├─ wappsite4you.de        ┐
-            └─ restaurant-alt-karow.de┘
+            └─ restaurant-alt-karow.berlin┘
                           │
                           ▼
                   IONOS VPS (UFW + Fail2Ban)
@@ -74,26 +74,28 @@ Erwartet: `:3000` belegt von wappsite-Node, `:3001` frei. Falls `:3001` belegt �
 
 ## 2. Domain mit VPS verbinden
 
-**Aktueller Stand (2026-05):** Die Domain `restaurant-alt-karow.de` ist bei **Wix** registriert. Ein vollständiger Registrar-Transfer ist noch nicht möglich. Vorgehen: **DNS bei Wix umstellen** (Wix bleibt Registrar + DNS-Host), Zertifikat per Let's Encrypt holen. Später dann ggf. vollständiger Transfer (siehe 2.B).
+**Aktueller Stand (2026-05):** Die finale Domain ist `restaurant-alt-karow.berlin` (statt der ursprünglich geplanten `.de`-Variante). Bei welchem Registrar/DNS-Host die `.berlin`-Domain liegt, hängt vom Anbieter ab — Wix verkauft `.berlin`-Domains derzeit **nicht**. Wenn die Domain bei einem anderen Anbieter registriert ist (z. B. IONOS, INWX, Cloudflare), gilt die generische Variante in **Abschnitt 2.B** (DNS-Records direkt setzen). Falls eine Wix-Domain involviert ist, gelten die Hinweise aus **Abschnitt 2.A**.
 
 ---
 
-### 2.A — AKTUELL: Wix-Domain temporär auf VPS leiten
+### 2.A — Wix-Domain temporär auf VPS leiten (nur falls Domain bei Wix liegt)
 
-> Ziel: A-Records im Wix-DNS-Panel so umlenken, dass `restaurant-alt-karow.de` und `www.…` auf den IONOS-VPS zeigen. Wix bleibt **Registrar** (Verwaltung der Domain selbst) und **DNS-Host** (Verwaltung der Records) — wir nutzen nur sein DNS-Panel.
+> Nur lesen, wenn die Domain tatsächlich bei Wix verwaltet wird. Für die `.berlin`-Domain wahrscheinlich nicht relevant — dann zu Abschnitt 2.B springen.
+
+> Ziel: A-Records im Wix-DNS-Panel so umlenken, dass `restaurant-alt-karow.berlin` und `www.…` auf den IONOS-VPS zeigen. Wix bleibt **Registrar** (Verwaltung der Domain selbst) und **DNS-Host** (Verwaltung der Records) — wir nutzen nur sein DNS-Panel.
 
 #### 2.A.1 Wichtig vorab — Wix-spezifische Stolperfallen
 
 - **Wenn die Domain bei Wix mit einer Wix-Website verbunden ist** (Domain-„Verbindung"), überschreibt Wix die DNS-Records gerne stillschweigend oder zeigt manuell gesetzte Records nicht an. **Vor** der Umstellung: in Wix den Punkt **„Domain trennen"** ausführen (Wix Dashboard → Domains → Domain auswählen → „What would you like to do?" → **„Point a domain to a different site"** bzw. **„Disconnect from site"**).
 - Wix erlaubt das Editieren von A/CNAME/MX/TXT-Records auch ohne Transfer. Es gibt **kein** Editieren der Nameserver-Delegation, solange die Domain bei Wix registriert ist — wir brauchen das aber gar nicht.
 - Wix-Premium-Pläne stellen automatisch ein SSL-Zertifikat für die Domain bereit. Das bleibt ungenutzt liegen, sobald die DNS-Records auf den VPS zeigen — irrelevant, kein Konflikt mit unserem Let's-Encrypt-Cert.
-- **Mail bei Wix:** Falls Mail-Postfächer (z. B. Google Workspace via Wix verbunden) genutzt werden, **MX-, SPF-, DKIM-, DMARC-Records nicht anrühren**. Nur die `A @`- und `A/CNAME www`-Records werden geändert. Aktuell sind für `restaurant-alt-karow.de` keine eigenen Mail-Postfächer bekannt — vor dem Editieren trotzdem kurz die DNS-Liste in Wix scannen und alles mit Typ `MX`, `TXT (v=spf1 …)` oder `_dmarc` unangetastet lassen.
+- **Mail bei Wix:** Falls Mail-Postfächer (z. B. Google Workspace via Wix verbunden) genutzt werden, **MX-, SPF-, DKIM-, DMARC-Records nicht anrühren**. Nur die `A @`- und `A/CNAME www`-Records werden geändert. Aktuell sind für `restaurant-alt-karow.berlin` keine eigenen Mail-Postfächer bekannt — vor dem Editieren trotzdem kurz die DNS-Liste in Wix scannen und alles mit Typ `MX`, `TXT (v=spf1 …)` oder `_dmarc` unangetastet lassen.
 
 #### 2.A.2 Schritt 0 — TTL vorab senken (24 – 48 h vorher empfohlen)
 
 Damit der Cutover möglichst kurze Downtime hat, **vorher** im Wix-DNS-Panel die TTL der bestehenden A-Records auf den kleinstmöglichen Wert ändern (Wix erlaubt typischerweise minimum **5 min** = `300 s` oder `1 h` = `3600 s`):
 
-1. Wix Dashboard → **Domains** → `restaurant-alt-karow.de` → **„Advanced"** bzw. **„DNS Records bearbeiten"**.
+1. Wix Dashboard → **Domains** → `restaurant-alt-karow.berlin` → **„Advanced"** bzw. **„DNS Records bearbeiten"**.
 2. A-Record für Host `@` öffnen → TTL auf **5 min** (`300`) reduzieren. Speichern.
 3. CNAME/A-Record für Host `www` analog auf TTL `300`.
 4. **Warten:** 24 – 48 Stunden, bis der bisherige (alte) TTL-Wert in den Caches abgelaufen ist. Danach reagieren spätere Änderungen weltweit innerhalb von ~5 min.
@@ -130,7 +132,7 @@ Im Wix-DNS-Panel:
 2. **`www`-Hostname:**
    - Existiert ein CNAME `www → ...wixdns.net`? → **Löschen**.
    - Neuen `A www → <DEINE_VPS_IPV4>` mit TTL `300` anlegen.
-   - Alternativ: CNAME `www → restaurant-alt-karow.de` (Wix erlaubt das in der Regel, ist gleichwertig, hält den Wert automatisch synchron).
+   - Alternativ: CNAME `www → restaurant-alt-karow.berlin` (Wix erlaubt das in der Regel, ist gleichwertig, hält den Wert automatisch synchron).
 
 3. **CAA-Record (optional, empfohlen) — schützt vor Cert-Missbrauch:**
    - Typ `CAA`, Host `@`, Wert `0 issue "letsencrypt.org"`, TTL `3600`.
@@ -144,21 +146,21 @@ Vom **VPS** oder lokal (Windows-PowerShell akzeptiert `nslookup`):
 
 ```bash
 # Auf dem VPS / Linux / macOS:
-$ dig +short restaurant-alt-karow.de
-$ dig +short www.restaurant-alt-karow.de
-$ dig +short restaurant-alt-karow.de @1.1.1.1   # Cloudflare-Resolver
-$ dig +short restaurant-alt-karow.de @8.8.8.8   # Google-Resolver
+$ dig +short restaurant-alt-karow.berlin
+$ dig +short www.restaurant-alt-karow.berlin
+$ dig +short restaurant-alt-karow.berlin @1.1.1.1   # Cloudflare-Resolver
+$ dig +short restaurant-alt-karow.berlin @8.8.8.8   # Google-Resolver
 ```
 
 ```powershell
 # Lokal Windows:
-nslookup restaurant-alt-karow.de
-nslookup restaurant-alt-karow.de 1.1.1.1
+nslookup restaurant-alt-karow.berlin
+nslookup restaurant-alt-karow.berlin 1.1.1.1
 ```
 
 Erwartet: beide Antworten = `<DEINE_VPS_IPV4>`. Solange noch alte Wix-IP zurückkommt, ist die Propagation nicht durch.
 
-Visueller Check weltweit: <https://dnschecker.org/#A/restaurant-alt-karow.de> — sollte überwiegend Grün mit deiner VPS-IP zeigen.
+Visueller Check weltweit: <https://dnschecker.org/#A/restaurant-alt-karow.berlin> — sollte überwiegend Grün mit deiner VPS-IP zeigen.
 
 **Faustregel:**
 
@@ -176,7 +178,7 @@ Wichtig:
 1. **Nginx-Site erst aktivieren, wenn DNS propagiert ist** (sonst gibt Certbot "DNS problem" oder "Connection refused" zurück).
 2. Erstkonfiguration des Nginx-Blocks als **HTTP-only** (Port 80) — wie in Abschnitt 6 angelegt.
 3. `sudo nginx -t && sudo systemctl reload nginx`.
-4. Browser-Test: `http://restaurant-alt-karow.de` → muss die neue Site liefern (noch ohne Schloss).
+4. Browser-Test: `http://restaurant-alt-karow.berlin` → muss die neue Site liefern (noch ohne Schloss).
 5. Certbot ausführen (Abschnitt 7) → Let's Encrypt löst die HTTP-01-Challenge über Port 80 ein, schreibt das Zertifikat und konfiguriert den 443-Block automatisch.
 
 > Let's Encrypt **muss** dafür die Domain via Port 80 erreichen können → UFW: 80 + 443 offen, kein Cloudflare/Wix-Proxy davor (bei reiner DNS-Umlenkung ist das automatisch der Fall).
@@ -190,9 +192,23 @@ Wenn die alte Wix-Website nicht mehr aufrufbar sein soll:
 
 ---
 
-### 2.B — SPÄTER: Vollständiger Domain-Transfer weg von Wix
+### 2.B — Standard: DNS direkt beim Registrar setzen (oder Transfer weg von Wix)
 
-Wenn du die Domain irgendwann komplett bei Wix herauslöst (z. B. zu IONOS, Cloudflare oder Namecheap), läuft das so ab:
+Für die `.berlin`-Domain (oder jede andere Domain, die nicht bei Wix liegt) ist dieser Weg der Standard:
+
+**Direkter DNS-Setup** beim Registrar/DNS-Host (z. B. INWX, IONOS, Cloudflare):
+
+| Typ | Hostname | Wert               | TTL  |
+| --- | -------- | ------------------ | ---- |
+| A   | `@`      | `<VPS_IPV4>` (`31.70.80.71`) | 3600 |
+| A   | `www`    | `<VPS_IPV4>`                  | 3600 |
+| CAA | `@`      | `0 issue "letsencrypt.org"`   | 3600 (optional, empfohlen) |
+
+Propagation prüfen wie in 2.A.5 (`dig +short` über mehrere Resolver).
+
+---
+
+**Wenn die Domain noch bei Wix liegt und transferiert werden soll**, läuft das so ab:
 
 1. **Wix-Domain auf transferfähig stellen:**
    - Wix Dashboard → Domain → **„Transfer away from Wix"** klicken.
@@ -221,27 +237,27 @@ Wenn du die Domain irgendwann komplett bei Wix herauslöst (z. B. zu IONOS, Clou
 | Wix setzt nach Speichern die A-Records still zurück                     | Auto-DNS-Schutz aktiv für „verbundene" Domains                          | Domain in Wix endgültig auf **„Point to external"** umstellen                                                            |
 | Browser zeigt Wix-Site, aber `curl` zeigt VPS-Site                       | Browser-DNS-Cache oder HSTS-Cache vom alten Wix-Zert                    | Browser-Cache + DNS-Cache leeren; in Inkognito-Tab testen                                                                |
 | Certbot: `Detail: …: DNS problem: NXDOMAIN looking up A for …`          | DNS noch nicht propagiert                                                | `dig` über mehrere Resolver wiederholen; warten                                                                          |
-| Certbot: `Connection refused` auf Port 80                                | UFW blockiert 80; Nginx hört nicht; falscher `server_name`              | `sudo ufw status`, `sudo nginx -t`, `curl -I http://restaurant-alt-karow.de` vom VPS                                     |
+| Certbot: `Connection refused` auf Port 80                                | UFW blockiert 80; Nginx hört nicht; falscher `server_name`              | `sudo ufw status`, `sudo nginx -t`, `curl -I http://restaurant-alt-karow.berlin` vom VPS                                     |
 | Certbot: `… too many certificates already issued for this exact set …`  | Let's Encrypt Rate-Limit (5 pro Domain / Woche)                          | `--dry-run` zur Vorbereitung nutzen; sonst eine Woche warten                                                            |
 | Browser zeigt Wix-Splash trotz korrekter DNS                            | Wix-Website noch „published", Wix-CDN hat IP-basiertes Routing          | Wix-Site in Schritt 2.A.7 unpublishen                                                                                    |
-| `www.restaurant-alt-karow.de` lädt nicht, Apex schon                    | `www`-Record vergessen oder nur als CNAME auf alten Wix-Wert            | `dig +short www.restaurant-alt-karow.de` prüfen; A oder CNAME auf VPS umstellen                                          |
+| `www.restaurant-alt-karow.berlin` lädt nicht, Apex schon                    | `www`-Record vergessen oder nur als CNAME auf alten Wix-Wert            | `dig +short www.restaurant-alt-karow.berlin` prüfen; A oder CNAME auf VPS umstellen                                          |
 | `mixed content`-Warnungen nach SSL-Cutover                              | Hardcoded `http://`-Links auf der neuen Site                            | Codebase nach `http://` durchsuchen, durch `https://` oder protokollrelativ ersetzen                                     |
 
 #### Mini-Cheatsheet für die Cutover-Stunde
 
 ```bash
 # DNS schnell und über mehrere Resolver gegenchecken
-$ for r in 1.1.1.1 8.8.8.8 9.9.9.9; do echo "[$r]"; dig +short @$r restaurant-alt-karow.de; done
+$ for r in 1.1.1.1 8.8.8.8 9.9.9.9; do echo "[$r]"; dig +short @$r restaurant-alt-karow.berlin; done
 
 # Antwortet der eigene VPS?
-$ curl -I http://restaurant-alt-karow.de
+$ curl -I http://restaurant-alt-karow.berlin
 
 # Nginx-Status & Logs
 $ sudo nginx -t
 $ sudo tail -f /var/log/nginx/restaurantaltkarow.access.log
 
 # Certbot trockentest, bevor man richtig holt
-$ sudo certbot --nginx -d restaurant-alt-karow.de -d www.restaurant-alt-karow.de --dry-run
+$ sudo certbot --nginx -d restaurant-alt-karow.berlin -d www.restaurant-alt-karow.berlin --dry-run
 ```
 
 ---
@@ -252,9 +268,9 @@ $ sudo certbot --nginx -d restaurant-alt-karow.de -d www.restaurant-alt-karow.de
 | ------------------ | --------------------------------------------------------------------------------------------------------------- |
 | **T − 48 h**       | Wix-TTL für `A @` und `A/CNAME www` auf `300` reduzieren                                                        |
 | **T − 24 h**       | VPS vorbereiten: Projekt unter `/var/www/restaurantaltkarow`, `npm ci && npm run build`, PM2 startet App auf 3001 |
-| **T − 1 h**        | Nginx-Block für `restaurant-alt-karow.de` als HTTP-only anlegen, `nginx -t`, `reload`                          |
+| **T − 1 h**        | Nginx-Block für `restaurant-alt-karow.berlin` als HTTP-only anlegen, `nginx -t`, `reload`                          |
 | **T = 0**          | In Wix `A @` und `A/CNAME www` auf VPS-IP umstellen                                                             |
-| **T + 5 – 30 min** | `dig` zeigt VPS-IP; `curl http://restaurant-alt-karow.de` liefert die neue Site                                |
+| **T + 5 – 30 min** | `dig` zeigt VPS-IP; `curl http://restaurant-alt-karow.berlin` liefert die neue Site                                |
 | **T + 35 min**     | Certbot ausführen → HTTPS aktiv                                                                                 |
 | **T + 1 h**        | Sanity-Check: Browser, `https://www…` → Redirect auf Apex, beide Sites unter SSL, Logs leer                    |
 | **T + 24 h**       | Wix-Site unpublishen (2.A.7); TTL ggf. wieder auf `3600` hochsetzen                                            |
@@ -269,11 +285,11 @@ $ sudo certbot --nginx -d restaurant-alt-karow.de -d www.restaurant-alt-karow.de
 >
 > ```
 > # auf dem VPS — Hostname per Header faken, DNS umgehen
-> curl -I -H "Host: restaurant-alt-karow.de" http://localhost
+> curl -I -H "Host: restaurant-alt-karow.berlin" http://localhost
 >
 > # lokal in Windows — hosts-Override für privaten Browser-Test
 > # %SystemRoot%\System32\drivers\etc\hosts:
-> # 31.70.80.71  restaurant-alt-karow.de  www.restaurant-alt-karow.de
+> # 31.70.80.71  restaurant-alt-karow.berlin  www.restaurant-alt-karow.berlin
 > ```
 >
 > Erst nach erfolgreichem Test: DNS bei Wix umstellen (Schritt 2.A.4), dann Certbot (Schritt 7).
@@ -394,7 +410,7 @@ Damit künftig weitere Sites (mx-protec, mijocatering, …) ohne Konflikt dazuko
 | Projekt              | Lokaler Port | PM2-Process-Name     | Server-Pfad                     | Log-Pfad                          |
 | -------------------- | ------------ | -------------------- | ------------------------------- | --------------------------------- |
 | wappsite4you.de      | `3000`       | `wappsite4you`       | `/var/www/wappsite4you`         | `/var/log/wappsite4you/`          |
-| restaurant-alt-karow.de | `3001`    | `restaurantaltkarow` | `/var/www/restaurantaltkarow`   | `/var/log/restaurantaltkarow/`    |
+| restaurant-alt-karow.berlin | `3001`    | `restaurantaltkarow` | `/var/www/restaurantaltkarow`   | `/var/log/restaurantaltkarow/`    |
 | *(reserviert)*       | `3002`       | *(z. B. mxprotec)*   | `/var/www/mxprotec`             | `/var/log/mxprotec/`              |
 | *(reserviert)*       | `3003`       | *(z. B. mijocatering)* | `/var/www/mijocatering`       | `/var/log/mijocatering/`          |
 
@@ -661,15 +677,15 @@ Inhalt (HTTP-only — Certbot fügt gleich den 443-Block hinzu):
 server {
     listen 80;
     listen [::]:80;
-    server_name www.restaurant-alt-karow.de;
-    return 301 http://restaurant-alt-karow.de$request_uri;
+    server_name www.restaurant-alt-karow.berlin;
+    return 301 http://restaurant-alt-karow.berlin$request_uri;
 }
 
 # === Hauptserver ===
 server {
     listen 80;
     listen [::]:80;
-    server_name restaurant-alt-karow.de;
+    server_name restaurant-alt-karow.berlin;
 
     client_max_body_size 10M;
 
@@ -741,7 +757,7 @@ $ sudo nginx -t
 $ sudo systemctl reload nginx
 ```
 
-→ Test im Browser: `http://restaurant-alt-karow.de` zeigt die neue Seite. Die bestehende `https://wappsite4you.de` darf dabei **nicht** beeinträchtigt sein — kurz gegenprüfen.
+→ Test im Browser: `http://restaurant-alt-karow.berlin` zeigt die neue Seite. Die bestehende `https://wappsite4you.de` darf dabei **nicht** beeinträchtigt sein — kurz gegenprüfen.
 
 Nginx unterscheidet die beiden Sites anhand des `server_name` (Host-Header) — beide hören auf 80/443, geliefert wird, was zum Hostnamen passt.
 
@@ -753,21 +769,21 @@ Certbot ist bereits installiert. Nur das Zertifikat anfordern:
 
 ```bash
 $ sudo certbot --nginx \
-    -d restaurant-alt-karow.de \
-    -d www.restaurant-alt-karow.de \
+    -d restaurant-alt-karow.berlin \
+    -d www.restaurant-alt-karow.berlin \
     --redirect --hsts \
-    -m hello@restaurant-alt-karow.de \
+    -m hello@restaurant-alt-karow.berlin \
     --agree-tos --no-eff-email
 ```
 
-Wenn die Mail-Adresse `hello@restaurant-alt-karow.de` noch nicht existiert, eine bestehende Adresse verwenden — sie dient nur für Renewal-Warnungen.
+Wenn die Mail-Adresse `hello@restaurant-alt-karow.berlin` noch nicht existiert, eine bestehende Adresse verwenden — sie dient nur für Renewal-Warnungen.
 
 > **Hinweis zu `--staple-ocsp`:** Bewusst weggelassen. Let's Encrypt hat 2025 die OCSP-Responder-URL aus neuen Zertifikaten entfernt (Wechsel zu Short-Lived-Certs + CRL). Würde Certbot OCSP-Stapling in den Nginx-Block schreiben, bekäme man bei jedem `nginx -t` eine harmlose `"ssl_stapling" ignored, no OCSP responder URL`-Warnung. Auf diesem VPS tritt das bei der bestehenden wappsite-Site auf — Config funktioniert trotzdem, nur Kosmetik. Bei künftigen Renewals der wappsite-Zertifikate kann man die zwei Zeilen `ssl_stapling on;` / `ssl_stapling_verify on;` aus `/etc/nginx/sites-available/wappsite4you` entfernen, um die Warnung loszuwerden.
 
 Verifizieren:
 
 ```bash
-$ curl -I https://restaurant-alt-karow.de
+$ curl -I https://restaurant-alt-karow.berlin
 ```
 
 Erwartet: `HTTP/2 200` plus `strict-transport-security`-Header.
@@ -882,7 +898,7 @@ sudo certbot renew --dry-run
 | `pm2 start` schlägt mit `EADDRINUSE :::3001` fehl                       | Port 3001 schon belegt                                                               | `sudo ss -tulpn \| grep :3001` → Konflikt finden, oder im `ecosystem.config.cjs` anderen Port    |
 | `nginx -t` zeigt `duplicate server_name`                                | Server-Block mit gleichem `server_name` in zwei sites-enabled                        | Doppelten Eintrag entfernen, nur einer pro Domain                                                |
 | Browser zeigt falsche Site (wappsite-Inhalt unter restaurant-alt-karow) | `default_server` greift, weil eigener Block nicht aktiv ist                          | `ls /etc/nginx/sites-enabled/` prüfen; Symlink für restaurantaltkarow vorhanden? `nginx -t`     |
-| Certbot: „too many failed authorizations"                               | DNS zeigt noch nicht auf VPS, oder UFW blockt Port 80                                | `dig +short restaurant-alt-karow.de`, `sudo ufw status`                                          |
+| Certbot: „too many failed authorizations"                               | DNS zeigt noch nicht auf VPS, oder UFW blockt Port 80                                | `dig +short restaurant-alt-karow.berlin`, `sudo ufw status`                                          |
 | 502 Bad Gateway nur für neue Domain                                     | PM2-Prozess `restaurantaltkarow` nicht online                                        | `pm2 list`, ggf. `pm2 restart restaurantaltkarow`, Logs prüfen                                   |
 | Beide Sites starten nach Reboot nicht                                   | `pm2 save` nach Hinzufügen vergessen                                                 | Einmalig `pm2 start ecosystem.config.cjs` für beide ausführen, dann `pm2 save`                  |
 
@@ -907,11 +923,11 @@ $ pm2 logs wappsite4you
 - [ ] PM2-Prozess `restaurantaltkarow` läuft auf Port `3001` (`pm2 list`)
 - [ ] `pm2 save` nach dem Hinzufügen ausgeführt
 - [ ] Nginx-Server-Block aktiv, `nginx -t` sauber
-- [ ] HTTPS via Certbot für `restaurant-alt-karow.de` + `www.`
-- [ ] `curl -I https://restaurant-alt-karow.de` liefert `HTTP/2 200`
-- [ ] `www.restaurant-alt-karow.de` leitet auf Apex um
+- [ ] HTTPS via Certbot für `restaurant-alt-karow.berlin` + `www.`
+- [ ] `curl -I https://restaurant-alt-karow.berlin` liefert `HTTP/2 200`
+- [ ] `www.restaurant-alt-karow.berlin` leitet auf Apex um
 - [ ] `https://wappsite4you.de` ist weiterhin unbeeinträchtigt erreichbar
 - [ ] `sudo certbot renew --dry-run` listet beide Zertifikate erfolgreich
 - [ ] Reboot-Test: nach `sudo reboot` sind beide PM2-Prozesse `online`
 
-**Damit läuft restaurant-alt-karow.de parallel zu wappsite4you.de auf demselben VPS.**
+**Damit läuft restaurant-alt-karow.berlin parallel zu wappsite4you.de auf demselben VPS.**
