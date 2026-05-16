@@ -50,25 +50,51 @@ export default function VeranstaltungenPage() {
       {/* RÄUME */}
       <section className="section pt-0 bg-paper">
         <div className="container-wide">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-7">
             {siteConfig.rooms.map((room, i) => (
               <Reveal key={room.name} delay={i * 90}>
-                <article className="card-elevated relative p-9 h-full">
-                  <p
-                    className="text-burgundy uppercase tracking-[0.24em] text-[0.72rem]"
-                    style={{ fontWeight: 700 }}
-                  >
-                    {room.capacity}
-                  </p>
-                  <h3
-                    className="mt-5 font-serif text-3xl text-ink-strong"
-                    style={{ fontWeight: 700 }}
-                  >
-                    {room.name}
-                  </h3>
+                <article className="card-elevated relative overflow-hidden h-full flex flex-col">
+                  {room.image ? (
+                    <div className="relative aspect-[16/10] image-elegant">
+                      <Image
+                        src={room.image}
+                        alt={room.alt}
+                        fill
+                        sizes="(min-width: 1024px) 40vw, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover"
+                      />
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, transparent 50%, rgba(15,8,4,0.45) 100%)",
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative aspect-[16/10] bg-cream-deep flex items-center justify-center">
+                      <span className="font-serif italic text-muted text-lg">
+                        Foto folgt
+                      </span>
+                    </div>
+                  )}
+                  <div className="p-7 sm:p-8 flex-1 flex flex-col">
+                    <p
+                      className="text-burgundy uppercase tracking-[0.24em] text-[0.72rem]"
+                      style={{ fontWeight: 700 }}
+                    >
+                      {room.capacity}
+                    </p>
+                    <h3
+                      className="mt-3 font-serif text-3xl text-ink-strong"
+                      style={{ fontWeight: 700 }}
+                    >
+                      {room.name}
+                    </h3>
+                  </div>
                   <span
                     aria-hidden
-                    className="absolute top-4 right-4 w-7 h-7 border-t border-r border-gold/55"
+                    className="absolute top-4 right-4 w-7 h-7 border-t border-r border-gold/65 z-10"
                   />
                 </article>
               </Reveal>

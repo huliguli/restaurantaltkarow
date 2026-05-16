@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Ornament } from "./Ornament";
 import { CookieSettingsLink } from "./CookieSettingsLink";
@@ -11,13 +12,22 @@ export function Footer() {
 
       <div className="container-wide pt-20 pb-12 relative">
         <Ornament tone="gold" />
-        <h3
-          className="mt-7 text-center font-serif text-4xl sm:text-5xl text-paper tracking-tight"
-          style={{ fontWeight: 700 }}
-        >
-          {siteConfig.name}
-        </h3>
-        <p className="mt-4 text-center label-bright">{siteConfig.tagline}</p>
+        <div className="mt-8 flex justify-center">
+          <Image
+            src="/images/schriftlogo.png"
+            alt={siteConfig.name}
+            width={520}
+            height={170}
+            className="w-auto max-w-[420px] sm:max-w-[460px] h-auto"
+            style={{
+              // Schriftlogo ist dunkelgrau — auf dunklem Untergrund invertieren wir zu warmem Cremeweiß
+              filter:
+                "brightness(0) saturate(100%) invert(95%) sepia(8%) saturate(450%) hue-rotate(345deg) brightness(102%) contrast(96%)",
+            }}
+            priority={false}
+          />
+        </div>
+        <p className="mt-5 text-center label-bright">{siteConfig.tagline}</p>
 
         <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-12 text-[0.97rem]">
           {/* === ADRESSE === */}

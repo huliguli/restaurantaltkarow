@@ -28,10 +28,30 @@ export const siteConfig = {
     { day: "Sonntag", time: "12:00 – 18:00", note: "" },
   ],
   rooms: [
-    { name: "Hauptraum", capacity: "bis 40 Personen" },
-    { name: "Bankettsaal", capacity: "bis 50 Personen" },
-    { name: "Privatraum", capacity: "bis 12 Personen" },
-    { name: "Terrasse", capacity: "bis 40 Personen" },
+    {
+      name: "Hauptraum",
+      capacity: "bis 40 Personen",
+      image: "/images/raum-hauptraum.jpg",
+      alt: "Hauptraum mit eingedeckten Tischen",
+    },
+    {
+      name: "Bankettsaal",
+      capacity: "bis 50 Personen",
+      image: "/images/raum-bankettsaal.jpg",
+      alt: "Bankettsaal für größere Feiern",
+    },
+    {
+      name: "Privatraum",
+      capacity: "bis 12 Personen",
+      image: "/images/raum-privatraum.jpg",
+      alt: "Privater Grüner Raum für kleine Runden",
+    },
+    {
+      name: "Terrasse",
+      capacity: "bis 40 Personen",
+      image: null,
+      alt: "Terrasse",
+    },
   ],
 } as const;
 
