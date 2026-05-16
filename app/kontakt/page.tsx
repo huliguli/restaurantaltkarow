@@ -207,7 +207,9 @@ export default function KontaktPage() {
         <div className="w-full h-[420px] sm:h-[520px] relative overflow-hidden border-t border-ink/10">
           <iframe
             title="Standort Restaurant Alt-Karow auf der Karte"
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=13.488%2C52.621%2C13.508%2C52.629&layer=mapnik&marker=52.625%2C13.498`}
+            // Koordinaten via OSM Nominatim verifiziert:
+            // Lat 52.6093419 · Lon 13.4816542 (Alt-Karow 2, 13125 Berlin)
+            src="https://www.openstreetmap.org/export/embed.html?bbox=13.4736%2C52.6043%2C13.4896%2C52.6143&layer=mapnik&marker=52.6093419%2C13.4816542"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
             className="w-full h-full grayscale-[35%]"
