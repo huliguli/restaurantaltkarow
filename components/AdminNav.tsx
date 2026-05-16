@@ -6,7 +6,7 @@ import { AdminLogoutButton } from "./AdminLogoutButton";
 
 const NAV: { href: string; label: string; exact?: boolean }[] = [
   { href: "/admin", label: "Reservierungen", exact: true },
-  { href: "/admin/settings", label: "Einstellungen" },
+  { href: "/admin/analytics", label: "Analytics" },
 ];
 
 export function AdminNav({ username }: { username: string }) {

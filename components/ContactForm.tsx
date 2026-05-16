@@ -38,7 +38,6 @@ export function ContactForm() {
     if (submit.status === "sending") return;
 
     if (!name || !email || !nachricht) {
-      events.formError("contact", "missing_required");
       setSubmit({
         status: "error",
         message:
@@ -47,7 +46,6 @@ export function ContactForm() {
       return;
     }
 
-    events.formSubmit("contact");
     setSubmit({ status: "sending" });
 
     try {
@@ -65,8 +63,7 @@ export function ContactForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Versand fehlgeschlagen.");
-      events.formSuccess("contact");
-      events.contactRequested(anlass);
+      events.formSubmit("contact", { contact_topic: anlass });
       setSubmit({
         status: "ok",
         message:
@@ -80,7 +77,6 @@ export function ContactForm() {
       setNachricht("");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unbekannter Fehler.";
-      events.formError("contact", message);
       setSubmit({ status: "error", message });
     }
   }

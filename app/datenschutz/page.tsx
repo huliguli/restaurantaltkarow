@@ -86,44 +86,67 @@ export default function DatenschutzPage() {
 
           <div>
             <h2 className="font-serif text-2xl text-ink-strong" style={{ fontWeight: 700 }}>
-              4. Google Analytics 4 (mit Ihrer Einwilligung)
+              4. Eigene Webanalyse (selbst gehostet, mit Ihrer Einwilligung)
             </h2>
             <p className="mt-3">
               Wenn Sie im Cookie-Banner der Kategorie „Anonyme Statistik"
-              zustimmen, setzen wir <strong>Google Analytics 4 (GA4)</strong> ein,
-              einen Webanalysedienst der Google Ireland Limited, Gordon House,
-              Barrow Street, Dublin 4, Irland („Google").
+              zustimmen, erfassen wir aggregierte Nutzungsdaten dieser Website.
+              Es kommt <strong>kein externer Anbieter</strong> wie Google
+              Analytics, Matomo oder ähnliche zum Einsatz. Die Verarbeitung
+              findet ausschließlich auf unserem eigenen Server statt; es werden
+              keine Daten an Dritte weitergegeben und keine Daten in Drittländer
+              übermittelt.
             </p>
 
             <h3 className="mt-4 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
               Welche Daten werden verarbeitet?
             </h3>
             <ul className="mt-3 list-disc list-outside pl-6 space-y-1.5">
-              <li>Aufgerufene Seiten und Zeitpunkt</li>
-              <li>Verweildauer und Scrolltiefe</li>
+              <li>Aufgerufene Seiten und Zeitpunkt der Zugriffe</li>
+              <li>Sitzungsdauer und Scrolltiefe (25 / 50 / 75 / 100 %)</li>
               <li>Klicks auf Buttons, Telefonnummer-Links, Social-Media-Links, PDF-Downloads</li>
-              <li>Formularinteraktionen (Start, Versand, Erfolg, Fehler) für Reservierung, Kontaktformular und Buffet-Konfiguratoren</li>
-              <li>Geräte- und Browserinformationen (Typ, Auflösungsklasse, Sprache)</li>
-              <li>Ungefährer Standort (Land/Region, NICHT Stadt-Ebene, da IP-Anonymisierung aktiv)</li>
-              <li>Herkunft der Sitzung (Referrer)</li>
+              <li>Formularinteraktionen (Start, Versand, Abbruch) für Reservierung, Kontaktformular und Buffet-Konfiguratoren</li>
+              <li>Geräteklasse (Mobile / Tablet / Desktop), Browser-Familie, Betriebssystem-Familie</li>
+              <li>Bevorzugte Browsersprache (z. B. „de"), Länderkennung sofern vom Reverse-Proxy übermittelt</li>
+              <li>Verweis-Domain (Referrer) — ohne Pfad oder Query-Parameter</li>
             </ul>
 
             <h3 className="mt-5 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
-              Konfiguration (technische Maßnahmen)
+              Technische Maßnahmen
             </h3>
             <ul className="mt-3 list-disc list-outside pl-6 space-y-1.5">
-              <li><strong>IP-Anonymisierung</strong> ist aktiviert (<code>anonymize_ip: true</code>) — Ihre IP wird vor der Speicherung gekürzt.</li>
-              <li><strong>Google-Signale</strong> (geräteübergreifendes Tracking) sind deaktiviert.</li>
-              <li><strong>Personalisierung von Werbung</strong> ist deaktiviert.</li>
-              <li>GA4 lädt erst <strong>nach</strong> Ihrer aktiven Zustimmung — vorher wird kein gtag.js-Skript ausgeführt.</li>
+              <li>
+                Ihre IP-Adresse wird <strong>niemals roh gespeichert</strong>.
+                Stattdessen wird sie mit einem geheimen, täglich rotierenden
+                Server-Salt zu einer 24-stelligen Hash-Kennung verrechnet
+                (SHA-256), die <strong>tagesgebunden</strong> ist und keine
+                tageübergreifende Verfolgung ermöglicht.
+              </li>
+              <li>
+                Auswertungen erfolgen ausschließlich aggregiert (Summen, Top-
+                Listen, Durchschnitte). Es findet kein Profil-Tracking statt.
+              </li>
+              <li>
+                Es werden <strong>keine Tracking-Cookies</strong> gesetzt.
+                Lediglich eine sitzungsbezogene ID wird im Browser-Speicher
+                (<code>sessionStorage</code>) Ihres Tabs gehalten, um eine
+                Sitzung zusammenhängend auswerten zu können.
+              </li>
+              <li>
+                Die Auswertung lädt erst <strong>nach Ihrer aktiven
+                Einwilligung</strong>. Ohne Einwilligung wird kein Tracking-
+                Skript aktiv.
+              </li>
             </ul>
 
             <h3 className="mt-5 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
               Zweck der Verarbeitung
             </h3>
             <p className="mt-3">
-              Aggregierte Auswertung der Nutzung unserer Website, um Inhalte,
-              Performance und Bedienbarkeit kontinuierlich zu verbessern.
+              Aggregierte Auswertung der Nutzung dieser Website (welche Inhalte
+              werden besucht, wie schnell finden Gäste die gesuchten
+              Informationen), um Inhalte, Performance und Bedienbarkeit
+              kontinuierlich zu verbessern.
             </p>
 
             <h3 className="mt-5 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
@@ -138,27 +161,23 @@ export default function DatenschutzPage() {
             </p>
 
             <h3 className="mt-5 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
-              Datenübermittlung in Drittländer
+              Empfänger / Auftragsverarbeiter
             </h3>
             <p className="mt-3">
-              Google verarbeitet die Daten primär auf Servern innerhalb der EU.
-              Eine Übermittlung in die USA kann nicht ausgeschlossen werden.
-              Google ist nach dem EU-US Data Privacy Framework zertifiziert,
-              wodurch ein angemessenes Datenschutzniveau gewährleistet wird
-              (Angemessenheitsbeschluss der EU-Kommission vom 10.07.2023).
-              Soweit Daten dennoch außerhalb des EU-DPF übermittelt werden,
-              stützen wir uns auf Standardvertragsklauseln gemäß Art. 46 Abs. 2
-              DSGVO.
+              <strong>Keine.</strong> Sämtliche Analyse-Daten werden auf einem
+              Server in Deutschland verarbeitet, der ausschließlich von uns
+              betrieben wird. Es findet keine Übermittlung an Dritte und keine
+              Drittlandübermittlung statt.
             </p>
 
             <h3 className="mt-5 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
               Speicherdauer
             </h3>
             <p className="mt-3">
-              GA4-Ereignisdaten werden in unserem Konto auf eine Aufbewahrungsdauer
-              von <strong>2 Monaten</strong> konfiguriert (Standardminimum). Nach
-              Ablauf dieser Frist werden ereignisbezogene Daten automatisch
-              gelöscht. Aggregierte Berichte können darüber hinaus erhalten bleiben.
+              Roh-Events werden für maximal <strong>90 Tage</strong> aufbewahrt
+              und danach automatisch gelöscht. Aggregierte Auswertungen können
+              darüber hinaus zu statistischen Zwecken erhalten bleiben — diese
+              enthalten dann keinerlei Bezug zu einzelnen Sitzungen mehr.
             </p>
 
             <h3 className="mt-5 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
@@ -167,25 +186,9 @@ export default function DatenschutzPage() {
             <p className="mt-3">
               Sie können Ihre Einwilligung jederzeit widerrufen — entweder über
               die <CookieSettingsLink className="link-vintage text-burgundy" /> in
-              dieser Erklärung bzw. im Footer, oder indem Sie Cookies und
-              localStorage für diese Domain in Ihrem Browser löschen. Nach
-              Widerruf wird GA4 nicht mehr geladen.
-            </p>
-
-            <h3 className="mt-5 font-serif text-lg text-ink-strong" style={{ fontWeight: 600 }}>
-              Weitere Informationen
-            </h3>
-            <p className="mt-3">
-              Datenschutzerklärung von Google:{" "}
-              <a
-                href="https://policies.google.com/privacy"
-                target="_blank"
-                rel="noreferrer"
-                className="link-vintage text-burgundy"
-              >
-                policies.google.com/privacy
-              </a>
-              .
+              dieser Erklärung bzw. im Footer, oder indem Sie den{" "}
+              <code>localStorage</code> für diese Domain in Ihrem Browser
+              löschen. Nach Widerruf wird kein weiterer Event mehr versendet.
             </p>
           </div>
 

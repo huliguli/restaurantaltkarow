@@ -101,12 +101,10 @@ export function BuffetForm({ type }: Props) {
     if (submit.status === "sending") return;
 
     if (!variantId) {
-      events.formError(formName, "no_variant");
       setSubmit({ status: "error", message: "Bitte wählen Sie eine Buffet-Variante." });
       return;
     }
     if (!name || !telefon || !email || !wann || !personen) {
-      events.formError(formName, "missing_contact");
       setSubmit({
         status: "error",
         message: `Bitte füllen Sie alle Pflichtfelder im Block „Informationen" aus.`,
@@ -114,7 +112,6 @@ export function BuffetForm({ type }: Props) {
       return;
     }
 
-    events.formSubmit(formName);
     setSubmit({ status: "sending" });
 
     const selected = (obj: Record<string, boolean>, source: { id: string; label: string }[]) =>
@@ -155,11 +152,10 @@ export function BuffetForm({ type }: Props) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Anfrage konnte nicht gesendet werden.");
-      events.formSuccess(formName);
-      events.buffetRequested({
-        type,
-        variantId,
-        partySize: Number(personen) || 0,
+      events.formSubmit(formName, {
+        buffet_type: type,
+        variant_id: variantId,
+        party_size: Number(personen) || 0,
       });
       setSubmit({
         status: "ok",
@@ -168,7 +164,6 @@ export function BuffetForm({ type }: Props) {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unbekannter Fehler.";
-      events.formError(formName, message);
       setSubmit({ status: "error", message });
     }
   }

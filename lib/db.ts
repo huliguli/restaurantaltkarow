@@ -63,6 +63,82 @@ export function getDb(): DB {
       value TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    -- === Self-hosted Analytics =====================================
+    CREATE TABLE IF NOT EXISTS consents (
+      id TEXT PRIMARY KEY,
+      visitor_id TEXT NOT NULL,
+      necessary INTEGER NOT NULL DEFAULT 1,
+      analytics INTEGER NOT NULL DEFAULT 0,
+      marketing INTEGER NOT NULL DEFAULT 0,
+      functional INTEGER NOT NULL DEFAULT 0,
+      policy_version TEXT NOT NULL,
+      withdrawn INTEGER NOT NULL DEFAULT 0,
+      withdrawn_at TEXT,
+      ip_hash TEXT,
+      user_agent TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_consents_visitor ON consents(visitor_id);
+    CREATE INDEX IF NOT EXISTS idx_consents_created ON consents(created_at);
+    CREATE INDEX IF NOT EXISTS idx_consents_policy ON consents(policy_version);
+
+    CREATE TABLE IF NOT EXISTS analytics_visitors (
+      visitor_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      first_seen_at TEXT NOT NULL,
+      is_returning INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (visitor_id, date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_av_date ON analytics_visitors(date);
+
+    CREATE TABLE IF NOT EXISTS analytics_sessions (
+      id TEXT PRIMARY KEY,
+      visitor_id TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      pageviews INTEGER NOT NULL DEFAULT 0,
+      event_count INTEGER NOT NULL DEFAULT 0,
+      entry_path TEXT,
+      referrer TEXT,
+      device_type TEXT,
+      browser TEXT,
+      os TEXT,
+      language TEXT,
+      country TEXT,
+      is_returning INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_as_visitor ON analytics_sessions(visitor_id);
+    CREATE INDEX IF NOT EXISTS idx_as_started ON analytics_sessions(started_at);
+
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      visitor_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      page_path TEXT,
+      referrer TEXT,
+      cta_id TEXT,
+      form_id TEXT,
+      meta TEXT,
+      device_type TEXT,
+      browser TEXT,
+      os TEXT,
+      language TEXT,
+      country TEXT,
+      scroll_pct INTEGER,
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ae_type ON analytics_events(type);
+    CREATE INDEX IF NOT EXISTS idx_ae_session ON analytics_events(session_id);
+    CREATE INDEX IF NOT EXISTS idx_ae_visitor ON analytics_events(visitor_id);
+    CREATE INDEX IF NOT EXISTS idx_ae_path ON analytics_events(page_path);
+    CREATE INDEX IF NOT EXISTS idx_ae_cta ON analytics_events(cta_id);
+    CREATE INDEX IF NOT EXISTS idx_ae_created ON analytics_events(created_at);
+    CREATE INDEX IF NOT EXISTS idx_ae_type_created ON analytics_events(type, created_at);
   `);
 
   cached = db;

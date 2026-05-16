@@ -8,6 +8,8 @@ import {
   REOPEN_BANNER_EVENT,
   writeConsent,
 } from "@/lib/cookie-consent";
+import { sendConsentDecision } from "@/lib/analytics-events";
+import { POLICY_VERSION } from "@/lib/analytics/types";
 
 export function CookieBanner() {
   const pathname = usePathname();
@@ -34,18 +36,20 @@ export function CookieBanner() {
   if (pathname?.startsWith("/admin")) return null;
   if (!visible) return null;
 
-  const acceptAll = () => {
-    writeConsent({ necessary: true, analytics: true });
+  const persist = (analytics: boolean) => {
+    writeConsent({ necessary: true, analytics });
+    sendConsentDecision({
+      analytics,
+      marketing: false,
+      functional: false,
+      version: POLICY_VERSION,
+    });
     setVisible(false);
   };
-  const rejectAll = () => {
-    writeConsent({ necessary: true, analytics: false });
-    setVisible(false);
-  };
-  const saveCustom = () => {
-    writeConsent({ necessary: true, analytics: analyticsOn });
-    setVisible(false);
-  };
+
+  const acceptAll = () => persist(true);
+  const rejectAll = () => persist(false);
+  const saveCustom = () => persist(analyticsOn);
 
   return (
     <div

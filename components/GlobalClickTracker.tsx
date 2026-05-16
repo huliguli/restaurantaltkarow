@@ -4,18 +4,15 @@ import { useEffect } from "react";
 import { events } from "@/lib/analytics-events";
 
 /**
- * Globaler Click-Listener — fängt per Event-Delegation alle <a>-Klicks ab
- * und feuert je nach Linktyp das passende Analytics-Event.
+ * Event-Delegation für alle Klicks im Body.
  *
- * Vorteile:
- *  - Single Source of Truth fürs Outbound-Tracking
- *  - keine onClick-Spaghetti in jeder Komponente
- *  - neue Links werden automatisch mitgetrackt (z. B. wenn eine neue
- *    Telefon-Verlinkung später irgendwo eingefügt wird)
- *
- * Zusätzliche Event-Quellen:
- *  - `data-track="cta_label"` auf einem Element → cta_click mit Label
- *  - PDF-Downloads → pdf_download (auto-detected via .pdf-Pfad)
+ *  - `data-track="cta_id"` auf einem Element → cta_click mit der ID
+ *  - tel:-Link    → outbound_click(kind=phone)
+ *  - mailto:-Link → outbound_click(kind=email)
+ *  - instagram    → outbound_click(kind=instagram)
+ *  - maps         → outbound_click(kind=maps)
+ *  - PDF/Download → cta_click(`pdf:filename`)
+ *  - andere externe Links → outbound_click(kind=external)
  */
 export function GlobalClickTracker() {
   useEffect(() => {
@@ -24,14 +21,11 @@ export function GlobalClickTracker() {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      const link = target.closest("a") as HTMLAnchorElement | null;
       const trackableEl = target.closest("[data-track]") as HTMLElement | null;
-      const location = window.location.pathname;
+      const link = target.closest("a") as HTMLAnchorElement | null;
 
-      // 1) Data-Track-Attribut auf beliebigen Elementen
-      if (trackableEl) {
-        const label = trackableEl.dataset.track;
-        if (label) events.cta(label, location);
+      if (trackableEl?.dataset.track) {
+        events.ctaClick(trackableEl.dataset.track);
       }
 
       if (!link) return;
@@ -39,25 +33,22 @@ export function GlobalClickTracker() {
       if (!href) return;
 
       if (href.startsWith("tel:")) {
-        events.phoneClick(location);
+        events.outboundClick(href.replace("tel:", "").slice(0, 40), "phone");
         return;
       }
       if (href.startsWith("mailto:")) {
-        events.emailClick(location);
+        events.outboundClick(
+          href.replace("mailto:", "").split("?")[0].slice(0, 60),
+          "email",
+        );
         return;
       }
 
-      // PDF-Download
-      if (
-        href.toLowerCase().endsWith(".pdf") ||
-        link.hasAttribute("download")
-      ) {
+      if (href.toLowerCase().endsWith(".pdf") || link.hasAttribute("download")) {
         const file = href.split("/").pop() ?? href;
-        events.pdfDownload(file, location);
-        // weiterlaufen — könnte auch external sein
+        events.ctaClick(`pdf:${file.slice(0, 50)}`);
       }
 
-      // Externe Links (inkl. Maps, Instagram)
       let externalHost: string | null = null;
       try {
         const url = new URL(href, window.location.origin);
@@ -65,30 +56,28 @@ export function GlobalClickTracker() {
           externalHost = url.hostname.toLowerCase();
         }
       } catch {
-        /* relative URL — kein external */
+        /* relative */
       }
 
       if (externalHost) {
         if (externalHost.includes("instagram.com")) {
-          events.instagramClick(location);
+          events.outboundClick(externalHost, "instagram");
         } else if (
           externalHost.includes("google.com") &&
           href.includes("maps")
         ) {
-          events.mapsClick(location);
-        } else if (
-          externalHost.includes("openstreetmap") ||
-          externalHost.includes("maps")
-        ) {
-          events.mapsClick(location);
+          events.outboundClick(externalHost, "maps");
+        } else if (externalHost.includes("openstreetmap")) {
+          events.outboundClick(externalHost, "maps");
         } else {
-          events.externalLinkClick(externalHost, location);
+          events.outboundClick(externalHost, "external");
         }
       }
     };
 
     document.addEventListener("click", handler, { capture: true });
-    return () => document.removeEventListener("click", handler, { capture: true });
+    return () =>
+      document.removeEventListener("click", handler, { capture: true });
   }, []);
 
   return null;

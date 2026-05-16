@@ -60,7 +60,7 @@ export function ScrollDepthTracker() {
     function markIfNew(percent: 25 | 50 | 75 | 100) {
       if (sentRef.current.has(percent)) return;
       sentRef.current.add(percent);
-      events.scrollDepth(percent, pathname ?? "/");
+      events.scrollDepth(percent);
     }
   }, [pathname]);
 

@@ -68,28 +68,23 @@ export function ReservationForm() {
     if (submit.status === "sending") return;
 
     if (!dateIso || !time) {
-      events.formError("reservation", "missing_date_time");
       setSubmit({ status: "error", message: "Bitte Datum und Uhrzeit wählen." });
       return;
     }
     if (dateInvalid) {
-      events.formError("reservation", "invalid_date");
       setSubmit({ status: "error", message: dateInvalid });
       return;
     }
     if (!name || !email) {
-      events.formError("reservation", "missing_contact");
       setSubmit({ status: "error", message: "Bitte Name und E-Mail angeben." });
       return;
     }
     const ps = Number(partySize);
     if (!Number.isFinite(ps) || ps < 1 || ps > 80) {
-      events.formError("reservation", "invalid_party_size");
       setSubmit({ status: "error", message: "Personenanzahl bitte zwischen 1 und 80." });
       return;
     }
 
-    events.formSubmit("reservation");
     setSubmit({ status: "sending" });
 
     try {
@@ -109,11 +104,10 @@ export function ReservationForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Reservierung konnte nicht gesendet werden.");
-      events.formSuccess("reservation");
-      events.reservationRequested({
-        partySize: ps,
-        reservationDate: dateIso,
-        reservationTime: time,
+      events.formSubmit("reservation", {
+        party_size: ps,
+        reservation_date: dateIso,
+        reservation_time: time,
       });
       setSubmit({
         status: "ok",
@@ -130,7 +124,6 @@ export function ReservationForm() {
       setNotes("");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unbekannter Fehler.";
-      events.formError("reservation", message);
       setSubmit({ status: "error", message });
     }
   }
