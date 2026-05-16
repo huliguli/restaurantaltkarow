@@ -306,6 +306,29 @@ export const LIMITS = {
   vorspeisen: 4,
 } as const;
 
+/**
+ * Buffet-Varianten, die kulinarisch und mengenmäßig auf kleinere Anlässe
+ * ausgelegt sind. Bei Personenzahl > LARGE_PARTY_THRESHOLD wird im Form
+ * eine Bestätigung verlangt, bevor abgeschickt wird.
+ */
+export const SMALL_BUFFET_VARIANT_IDS: ReadonlySet<string> = new Set([
+  "feier-v2",
+  "trauer-v1",
+  "trauer-v2",
+]);
+export const LARGE_PARTY_THRESHOLD = 35;
+
+export function requiresLargePartyConfirmation(
+  variantId: string,
+  partySize: number,
+): boolean {
+  if (!variantId || !Number.isFinite(partySize)) return false;
+  return (
+    SMALL_BUFFET_VARIANT_IDS.has(variantId) &&
+    partySize > LARGE_PARTY_THRESHOLD
+  );
+}
+
 export const COMMON_HINWEISE = [
   "Buffet ab 20 Personen. Unter 20 Personen nur à la carte.",
   "Alle Buffets enthalten keine Getränke.",

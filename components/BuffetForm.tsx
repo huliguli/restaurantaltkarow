@@ -9,7 +9,9 @@ import {
   EROEFFNUNGSGETRAENKE,
   getVariants,
   HAUPTGERICHTE,
+  LARGE_PARTY_THRESHOLD,
   LIMITS,
+  requiresLargePartyConfirmation,
   SCHNITTCHEN,
   SUPPEN,
   VORSPEISEN,
@@ -57,6 +59,15 @@ export function BuffetForm({ type }: Props) {
   const [website, setWebsite] = useState(""); // Honeypot
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
   const [startedTracked, setStartedTracked] = useState(false);
+  /**
+   * Wenn der Gast eine kleine Buffet-Variante mit > 35 Personen kombiniert,
+   * fragen wir nach Bestätigung. `largePartyDialogOpen` steuert das Modal,
+   * `largePartyAcknowledged` wird nach Bestätigung kurz auf true gesetzt
+   * für genau diesen Submit. Bei jeder Variante-/Personen-Änderung resettet
+   * sich die Acknowledgement automatisch (Logik unten via Reset on change).
+   */
+  const [largePartyDialogOpen, setLargePartyDialogOpen] = useState(false);
+  const [largePartyAcknowledged, setLargePartyAcknowledged] = useState(false);
 
   const formName = type === "feier" ? "buffet_feier" : "buffet_trauer";
 
@@ -95,6 +106,12 @@ export function BuffetForm({ type }: Props) {
     setter({ ...current, [id]: !isOn });
   }
 
+  // Reset des Large-Party-Acknowledgements bei jeder Änderung von Variante
+  // oder Personenzahl — sonst könnte ein „alter" Consent stale weiterwirken.
+  function resetLargePartyAcknowledgement() {
+    if (largePartyAcknowledged) setLargePartyAcknowledged(false);
+  }
+
   // === Submit ============================================================
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -112,6 +129,21 @@ export function BuffetForm({ type }: Props) {
       return;
     }
 
+    // Wenn kleine Variante + große Gruppe → Bestätigung anfordern,
+    // bevor die Anfrage rausgeht. User muss aktiv „Trotzdem senden" klicken.
+    const partyNum = Number(personen);
+    if (
+      requiresLargePartyConfirmation(variantId, partyNum) &&
+      !largePartyAcknowledged
+    ) {
+      setLargePartyDialogOpen(true);
+      return;
+    }
+
+    await submitRequest();
+  }
+
+  async function submitRequest() {
     setSubmit({ status: "sending" });
 
     const selected = (obj: Record<string, boolean>, source: { id: string; label: string }[]) =>
@@ -198,7 +230,10 @@ export function BuffetForm({ type }: Props) {
                   name="variant"
                   value={v.id}
                   checked={active}
-                  onChange={() => setVariantId(v.id)}
+                  onChange={() => {
+                    setVariantId(v.id);
+                    resetLargePartyAcknowledgement();
+                  }}
                   className="sr-only"
                 />
                 <div className="flex items-baseline justify-between gap-4">
@@ -526,7 +561,10 @@ export function BuffetForm({ type }: Props) {
               required
               type="number"
               value={personen}
-              onChange={setPersonen}
+              onChange={(v) => {
+                setPersonen(v);
+                resetLargePartyAcknowledgement();
+              }}
               hint="Buffet ab 20 Personen"
             />
           </div>
@@ -594,7 +632,93 @@ export function BuffetForm({ type }: Props) {
           </p>
         </div>
       ) : null}
+
+      {largePartyDialogOpen ? (
+        <LargePartyDialog
+          partySize={Number(personen) || 0}
+          variantTitle={selectedVariant?.title ?? ""}
+          onCancel={() => setLargePartyDialogOpen(false)}
+          onConfirm={() => {
+            setLargePartyAcknowledged(true);
+            setLargePartyDialogOpen(false);
+            // Acknowledged ist jetzt true → erneuter submitRequest läuft durch
+            void submitRequest();
+          }}
+        />
+      ) : null}
     </form>
+  );
+}
+
+// ============================================================
+// Bestätigungs-Dialog bei großen Gruppen mit kleinem Buffet
+// ============================================================
+function LargePartyDialog({
+  partySize,
+  variantTitle,
+  onCancel,
+  onConfirm,
+}: {
+  partySize: number;
+  variantTitle: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="large-party-title"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
+    >
+      <button
+        type="button"
+        aria-label="Schließen"
+        onClick={onCancel}
+        className="absolute inset-0 bg-wood/75 backdrop-blur-sm"
+      />
+      <div className="relative max-w-lg w-full bg-paper border border-gold/50 shadow-warm p-8 sm:p-10">
+        <p className="label-bright text-burgundy text-[0.78rem]">Hinweis</p>
+        <h3
+          id="large-party-title"
+          className="mt-3 font-serif text-2xl sm:text-3xl text-ink-strong"
+          style={{ fontWeight: 700 }}
+        >
+          Gruppengröße & Buffet-Variante
+        </h3>
+        <p className="mt-5 text-ink leading-relaxed">
+          Sie haben <strong className="text-ink-strong">{partySize} Personen</strong>{" "}
+          mit der Variante <em>{variantTitle}</em> kombiniert. Diese Variante ist
+          aus unserer Erfahrung auf kleinere Anlässe (bis etwa{" "}
+          {LARGE_PARTY_THRESHOLD} Personen) ausgelegt. Bei größeren
+          Gesellschaften empfehlen wir Ihnen eine umfangreichere Variante
+          (Buffet 3 oder 4), damit wir alle Gäste in der gewohnten Qualität
+          bewirten können.
+        </p>
+        <p className="mt-4 text-ink-soft leading-relaxed text-sm">
+          Sie können Ihre Anfrage gerne trotzdem senden — wir besprechen die
+          Details dann persönlich mit Ihnen und finden gemeinsam die passende
+          Lösung.
+        </p>
+
+        <div className="mt-8 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn btn-outline"
+          >
+            Variante ändern
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="btn btn-primary"
+          >
+            Trotzdem senden
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
