@@ -40,7 +40,11 @@ export function ReservationCTA() {
           Gruppen. Rufen Sie uns an, wir freuen uns auf Ihren Besuch.
         </p>
         <div className="mt-11 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href={`tel:${siteConfig.phoneHref}`} className="btn btn-cream">
+          <a
+            href={`tel:${siteConfig.phoneHref}`}
+            className="btn btn-cream"
+            data-track="reserve_cta_phone"
+          >
             {siteConfig.phone}
           </a>
           <a
@@ -48,6 +52,7 @@ export function ReservationCTA() {
             target="_blank"
             rel="noreferrer"
             className="btn btn-outline-light"
+            data-track="instagram_cta"
           >
             Auf Instagram folgen
           </a>

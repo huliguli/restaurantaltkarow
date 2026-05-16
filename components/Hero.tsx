@@ -56,10 +56,18 @@ export function Hero() {
         </p>
 
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href={`tel:${siteConfig.phoneHref}`} className="btn btn-cream">
+          <a
+            href={`tel:${siteConfig.phoneHref}`}
+            className="btn btn-cream"
+            data-track="reserve_hero_phone"
+          >
             Tisch reservieren
           </a>
-          <Link href="/speisekarte" className="btn btn-outline-light">
+          <Link
+            href="/speisekarte"
+            className="btn btn-outline-light"
+            data-track="menu_hero"
+          >
             Zur Speisekarte
           </Link>
         </div>

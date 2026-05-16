@@ -519,6 +519,60 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 
 ---
 
+## 4.7 Cookie-Consent + Analytics (GA4)
+
+### Architektur
+
+- **Consent-Speicherung:** `localStorage` (kein Cookie), Key `rak-consent`. Schema in `lib/cookie-consent.ts`. Bei Version-Bump (`CURRENT_CONSENT_VERSION`) wird der Banner automatisch wieder angezeigt.
+- **Banner:** `components/CookieBanner.tsx` — drei Buttons (Alle akzeptieren / Nur notwendige / Einstellungen), DSGVO-konform, im Admin-Bereich ausgeblendet.
+- **Cookie-Einstellungen erneut öffnen:** `components/CookieSettingsLink.tsx` — feuert das `rak-consent-reopen` Custom-Event, der Banner reagiert darauf. Eingebunden in Footer + Datenschutzerklärung.
+
+### GA4-Integration
+
+- **Loader:** `components/AnalyticsProvider.tsx` — Client-Komponente im Root-Layout. Holt die Measurement-ID vom Server (`GET /api/settings/ga`, public), lädt `gtag.js` **nur** wenn ID gesetzt **und** Consent erteilt. Reagiert live auf Consent-Änderungen via `rak-consent-updated` Custom-Event.
+- **Konfiguration:** `anonymize_ip: true`, `allow_google_signals: false`, `allow_ad_personalization_signals: false`, `send_page_view: false` (SPA-Pageviews fire manuell via `usePathname()`).
+- **Consent Mode v2:** Default-State `analytics_storage: 'granted'`, ad-bezogene States auf `denied`. Wenn Consent fehlt, wird gtag.js gar nicht erst geladen.
+- **Measurement-ID-Verwaltung:** Im Admin unter `/admin/settings`. Wird in der `settings`-Tabelle (SQLite) gespeichert. Validierung: `/^G-[A-Z0-9]{4,16}$/`.
+
+### Event-Catalog
+
+Alle Events sind in `lib/analytics-events.ts` typisiert und namespaced (`events.xxx(...)`). Aufrufe sind no-ops, wenn gtag nicht geladen ist — Components müssen sich um Consent nicht kümmern.
+
+| Event | Wo wird's gefeuert | Parameter |
+|---|---|---|
+| `page_view` | `AnalyticsProvider` bei jeder Route-Änderung | path, location, title |
+| `phone_click` | `GlobalClickTracker` bei `tel:`-Links | click_location |
+| `email_click` | `GlobalClickTracker` bei `mailto:` | click_location |
+| `instagram_click` | `GlobalClickTracker` bei instagram.com-Links | click_location |
+| `maps_click` | `GlobalClickTracker` bei Google-Maps / OSM | click_location |
+| `external_link_click` | `GlobalClickTracker` bei externen Links | link_host, click_location |
+| `pdf_download` | `GlobalClickTracker` bei `.pdf`-Links oder `download`-Attribut | file_name, click_location |
+| `cta_click` | bei Element mit `data-track="label"` | cta_label, click_location |
+| `nav_click` | (reserviert für künftige Nav-Events) | nav_label, mobile_menu |
+| `scroll_depth` | `ScrollDepthTracker` bei 25/50/75/100 % | percent_scrolled, page_path |
+| `form_start` | Reservation/Contact/Buffet bei erstem `onFocus` | form_name |
+| `form_submit` | nach Validierung, vor Server-Call | form_name |
+| `form_success` | nach erfolgreichem Server-Response | form_name |
+| `form_error` | bei Validierungs-/Server-Fehler | form_name, error_message |
+| `reservation_request` | nach erfolgreicher Reservierung | party_size, reservation_date, reservation_time |
+| `buffet_request` | nach erfolgreichem Buffet-Versand | buffet_type, variant_id, party_size |
+| `contact_request` | nach erfolgreichem Kontaktversand | contact_topic |
+| `consent_decision` | (reserviert, aktuell ungenutzt) | analytics_granted |
+
+### Neue Events ergänzen
+
+1. Funktion in `lib/analytics-events.ts` unter `events` hinzufügen (typisiert).
+2. Aufrufen, wo sinnvoll — entweder direkt inline, oder via `data-track` auf einem Element (delegation in `GlobalClickTracker.tsx`).
+3. In GA4 → Konfigurieren → benutzerdefinierte Definitionen die neuen Event-Parameter als „benutzerdefinierte Dimensionen" registrieren, damit sie in Berichten erscheinen.
+
+### Wichtige Konventionen
+
+- Analytics ist **nicht** im Admin abschaltbar — nur die GA4-ID. Wenn ID leer, wird gtag.js nicht geladen (faktisches Off).
+- `GlobalClickTracker` läuft global im Layout → keine onClick-Handler pro Link nötig. Für CTA-Tracking einfach `data-track="kurzer_label"` auf das Element.
+- Pageviews werden manuell bei Route-Change gefeuert, weil `send_page_view: false` in der gtag-Config steht. Sonst gäbe es Doppel-Events bei SPA-Navigation.
+
+---
+
 ## 5. Server / Deployment — Kerninfo
 
 > Detaillierte Schritt-für-Schritt-Anleitung: `DEPLOYMENT.md`.

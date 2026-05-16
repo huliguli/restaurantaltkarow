@@ -84,6 +84,7 @@ export function Header() {
           <Link
             href="/reservieren"
             className={overHero ? "btn btn-cream" : "btn btn-primary"}
+            data-track="reserve_header"
           >
             Reservieren
           </Link>
@@ -134,6 +135,7 @@ export function Header() {
           <Link
             href="/reservieren"
             className="btn btn-primary self-start mt-3"
+            data-track="reserve_mobile_menu"
           >
             Reservieren
           </Link>

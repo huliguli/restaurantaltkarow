@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Ornament } from "./Ornament";
+import { CookieSettingsLink } from "./CookieSettingsLink";
 import { siteConfig } from "@/lib/siteConfig";
 
 export function Footer() {
@@ -115,13 +116,16 @@ export function Footer() {
             © {new Date().getFullYear()} {siteConfig.name}. Alle Rechte
             vorbehalten.
           </p>
-          <div className="flex gap-7">
+          <div className="flex flex-wrap gap-x-7 gap-y-2">
             <Link href="/impressum" className="link-vintage hover:text-paper">
               Impressum
             </Link>
             <Link href="/datenschutz" className="link-vintage hover:text-paper">
               Datenschutz
             </Link>
+            <CookieSettingsLink className="link-vintage hover:text-paper">
+              Cookie-Einstellungen
+            </CookieSettingsLink>
           </div>
         </div>
       </div>

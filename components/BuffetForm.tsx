@@ -16,6 +16,7 @@ import {
   type BuffetType,
   type Variant,
 } from "@/content/buffet";
+import { events } from "@/lib/analytics-events";
 
 type Props = {
   type: BuffetType;
@@ -55,6 +56,15 @@ export function BuffetForm({ type }: Props) {
 
   const [website, setWebsite] = useState(""); // Honeypot
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
+  const [startedTracked, setStartedTracked] = useState(false);
+
+  const formName = type === "feier" ? "buffet_feier" : "buffet_trauer";
+
+  function handleFirstInteraction() {
+    if (startedTracked) return;
+    setStartedTracked(true);
+    events.formStart(formName);
+  }
 
   const selectedVariant: Variant | undefined = variants.find(
     (v) => v.id === variantId,
@@ -91,10 +101,12 @@ export function BuffetForm({ type }: Props) {
     if (submit.status === "sending") return;
 
     if (!variantId) {
+      events.formError(formName, "no_variant");
       setSubmit({ status: "error", message: "Bitte wählen Sie eine Buffet-Variante." });
       return;
     }
     if (!name || !telefon || !email || !wann || !personen) {
+      events.formError(formName, "missing_contact");
       setSubmit({
         status: "error",
         message: `Bitte füllen Sie alle Pflichtfelder im Block „Informationen" aus.`,
@@ -102,6 +114,7 @@ export function BuffetForm({ type }: Props) {
       return;
     }
 
+    events.formSubmit(formName);
     setSubmit({ status: "sending" });
 
     const selected = (obj: Record<string, boolean>, source: { id: string; label: string }[]) =>
@@ -142,22 +155,32 @@ export function BuffetForm({ type }: Props) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Anfrage konnte nicht gesendet werden.");
+      events.formSuccess(formName);
+      events.buffetRequested({
+        type,
+        variantId,
+        partySize: Number(personen) || 0,
+      });
       setSubmit({
         status: "ok",
         message:
           "Vielen Dank — wir haben Ihre Anfrage erhalten und melden uns telefonisch oder per E-Mail bei Ihnen.",
       });
     } catch (err) {
-      setSubmit({
-        status: "error",
-        message: err instanceof Error ? err.message : "Unbekannter Fehler.",
-      });
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler.";
+      events.formError(formName, message);
+      setSubmit({ status: "error", message });
     }
   }
 
   // === Render ============================================================
   return (
-    <form onSubmit={handleSubmit} className="space-y-14" noValidate>
+    <form
+      onSubmit={handleSubmit}
+      onFocus={handleFirstInteraction}
+      className="space-y-14"
+      noValidate
+    >
       {/* === Schritt 1: Variante wählen ==================================*/}
       <fieldset>
         <legend className="label-bright mb-6 block text-ink-strong text-[0.82rem]">

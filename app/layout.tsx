@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { CookieBanner } from "@/components/CookieBanner";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
+import { GlobalClickTracker } from "@/components/GlobalClickTracker";
+import { ScrollDepthTracker } from "@/components/ScrollDepthTracker";
 import { siteConfig } from "@/lib/siteConfig";
 import "./globals.css";
 
@@ -107,6 +111,10 @@ export default function RootLayout({
         <Header />
         <main className="relative z-10">{children}</main>
         <Footer />
+        <CookieBanner />
+        <AnalyticsProvider />
+        <GlobalClickTracker />
+        <ScrollDepthTracker />
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger

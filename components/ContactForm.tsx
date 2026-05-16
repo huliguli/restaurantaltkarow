@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { events } from "@/lib/analytics-events";
 
 type SubmitState =
   | { status: "idle" }
@@ -24,12 +25,20 @@ export function ContactForm() {
   const [nachricht, setNachricht] = useState("");
   const [website, setWebsite] = useState(""); // Honeypot
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
+  const [startedTracked, setStartedTracked] = useState(false);
+
+  function handleFirstInteraction() {
+    if (startedTracked) return;
+    setStartedTracked(true);
+    events.formStart("contact");
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submit.status === "sending") return;
 
     if (!name || !email || !nachricht) {
+      events.formError("contact", "missing_required");
       setSubmit({
         status: "error",
         message:
@@ -38,6 +47,7 @@ export function ContactForm() {
       return;
     }
 
+    events.formSubmit("contact");
     setSubmit({ status: "sending" });
 
     try {
@@ -55,6 +65,8 @@ export function ContactForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Versand fehlgeschlagen.");
+      events.formSuccess("contact");
+      events.contactRequested(anlass);
       setSubmit({
         status: "ok",
         message:
@@ -67,15 +79,19 @@ export function ContactForm() {
       setAnlass(ANLAESSE[0]);
       setNachricht("");
     } catch (err) {
-      setSubmit({
-        status: "error",
-        message: err instanceof Error ? err.message : "Unbekannter Fehler.",
-      });
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler.";
+      events.formError("contact", message);
+      setSubmit({ status: "error", message });
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+    <form
+      onSubmit={handleSubmit}
+      onFocus={handleFirstInteraction}
+      className="space-y-6"
+      noValidate
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
         <Field
           label="Name"

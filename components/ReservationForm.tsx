@@ -10,6 +10,7 @@ import {
   slotsForDate,
   toIsoDate,
 } from "@/lib/reservation-rules";
+import { events } from "@/lib/analytics-events";
 
 type SubmitState =
   | { status: "idle" }
@@ -28,6 +29,13 @@ export function ReservationForm() {
   const [notes, setNotes] = useState("");
   const [website, setWebsite] = useState(""); // Honeypot
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
+  const [startedTracked, setStartedTracked] = useState(false);
+
+  function handleFirstInteraction() {
+    if (startedTracked) return;
+    setStartedTracked(true);
+    events.formStart("reservation");
+  }
 
   const earliest = useMemo(() => earliestAllowedDate(), []);
   // Max-Datum: heute + 90 Tage
@@ -60,23 +68,28 @@ export function ReservationForm() {
     if (submit.status === "sending") return;
 
     if (!dateIso || !time) {
+      events.formError("reservation", "missing_date_time");
       setSubmit({ status: "error", message: "Bitte Datum und Uhrzeit wählen." });
       return;
     }
     if (dateInvalid) {
+      events.formError("reservation", "invalid_date");
       setSubmit({ status: "error", message: dateInvalid });
       return;
     }
     if (!name || !email) {
+      events.formError("reservation", "missing_contact");
       setSubmit({ status: "error", message: "Bitte Name und E-Mail angeben." });
       return;
     }
     const ps = Number(partySize);
     if (!Number.isFinite(ps) || ps < 1 || ps > 80) {
+      events.formError("reservation", "invalid_party_size");
       setSubmit({ status: "error", message: "Personenanzahl bitte zwischen 1 und 80." });
       return;
     }
 
+    events.formSubmit("reservation");
     setSubmit({ status: "sending" });
 
     try {
@@ -96,6 +109,12 @@ export function ReservationForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Reservierung konnte nicht gesendet werden.");
+      events.formSuccess("reservation");
+      events.reservationRequested({
+        partySize: ps,
+        reservationDate: dateIso,
+        reservationTime: time,
+      });
       setSubmit({
         status: "ok",
         message:
@@ -110,15 +129,19 @@ export function ReservationForm() {
       setPhone("");
       setNotes("");
     } catch (err) {
-      setSubmit({
-        status: "error",
-        message: err instanceof Error ? err.message : "Unbekannter Fehler.",
-      });
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler.";
+      events.formError("reservation", message);
+      setSubmit({ status: "error", message });
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-10" noValidate>
+    <form
+      onSubmit={handleSubmit}
+      onFocus={handleFirstInteraction}
+      className="space-y-10"
+      noValidate
+    >
       {/* === Schritt 1: Datum & Uhrzeit ================================= */}
       <fieldset>
         <legend className="label-bright mb-5 block text-ink-strong text-[0.82rem]">

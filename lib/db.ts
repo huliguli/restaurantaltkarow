@@ -57,6 +57,12 @@ export function getDb(): DB {
     CREATE INDEX IF NOT EXISTS idx_reservations_status ON reservations(status);
     CREATE INDEX IF NOT EXISTS idx_reservations_date ON reservations(reservation_date);
     CREATE INDEX IF NOT EXISTS idx_reservations_token ON reservations(token);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   cached = db;
