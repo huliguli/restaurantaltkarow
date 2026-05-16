@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   BEILAGEN,
   BUFFET_META,
@@ -652,6 +653,11 @@ export function BuffetForm({ type }: Props) {
 
 // ============================================================
 // Bestätigungs-Dialog bei großen Gruppen mit kleinem Buffet
+//
+// Wird via React-Portal direkt in document.body gemountet — das ist nötig,
+// weil `position: fixed` sonst relativ zum nächsten transformierten
+// Ancestor positioniert würde (der <Reveal>-Wrapper hat translateY).
+// Mit Portal: echtes Viewport-Fullscreen, Backdrop bedeckt alles.
 // ============================================================
 function LargePartyDialog({
   partySize,
@@ -664,20 +670,40 @@ function LargePartyDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Body-Scroll während Modal-Anzeige sperren
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    // Escape-Taste schließt
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onCancel]);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="large-party-title"
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
     >
       <button
         type="button"
         aria-label="Schließen"
         onClick={onCancel}
-        className="absolute inset-0 bg-wood/75 backdrop-blur-sm"
+        className="absolute inset-0 w-full h-full bg-wood/85 backdrop-blur-md cursor-default"
       />
-      <div className="relative max-w-lg w-full bg-paper border border-gold/50 shadow-warm p-8 sm:p-10">
+      <div className="relative max-w-lg w-full bg-paper border border-gold/55 shadow-warm p-8 sm:p-10 corner-decor animate-[fade-in_220ms_ease-out]">
         <p className="label-bright text-burgundy text-[0.78rem]">Hinweis</p>
         <h3
           id="large-party-title"
@@ -687,7 +713,10 @@ function LargePartyDialog({
           Gruppengröße & Buffet-Variante
         </h3>
         <p className="mt-5 text-ink leading-relaxed">
-          Sie haben <strong className="text-ink-strong">{partySize} Personen</strong>{" "}
+          Sie haben{" "}
+          <strong className="text-ink-strong">
+            {partySize} Personen
+          </strong>{" "}
           mit der Variante <em>{variantTitle}</em> kombiniert. Diese Variante ist
           aus unserer Erfahrung auf kleinere Anlässe (bis etwa{" "}
           {LARGE_PARTY_THRESHOLD} Personen) ausgelegt. Bei größeren
@@ -702,23 +731,16 @@ function LargePartyDialog({
         </p>
 
         <div className="mt-8 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn btn-outline"
-          >
+          <button type="button" onClick={onCancel} className="btn btn-outline">
             Variante ändern
           </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="btn btn-primary"
-          >
+          <button type="button" onClick={onConfirm} className="btn btn-primary">
             Trotzdem senden
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
