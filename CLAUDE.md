@@ -18,14 +18,14 @@ Statische, hochwertige Website für das **Restaurant Alt-Karow** (Berlin-Karow, 
 
 **Branche/Profil:** Deutsche Küche mit osteuropäischen (russischen) Akzenten. Nachbarschafts-Restaurant mit Tradition, Feierraum-Angebot, Terrasse. Familiärer Ton.
 
-**Aktueller Stand:** Vollwertige Marketing-Website mit Speisekarte, Veranstaltungs-Seite, Galerie, Kontakt. Inhalte teilweise auf Platzhalter-Basis (Speisekarte, Impressum, Datenschutz) — müssen vor Live-Gang vom Betreiber verifiziert werden.
+**Aktueller Stand:** Vollständige Production-Site live unter `https://restaurant-alt-karow.berlin`. Marketing-Pages (Start, Speisekarte, Veranstaltungen, Galerie, Kontakt) + interaktive Reservierung mit Admin-Dashboard + Buffet-Konfiguratoren mit Mailversand + self-hosted Analytics.
 
 **Bewusste Nicht-Ziele:**
 
-- Kein Online-Reservierungssystem — Reservierungen laufen telefonisch.
-- Kein CMS — Inhalte als TypeScript-Module unter `content/` (Code-as-Content, schneller, versioniert).
-- Keine Datenbank, kein Auth, kein E-Commerce.
-- Keine externen Tracker, keine Werbe-Cookies.
+- Kein CMS — Inhalte als TypeScript-Module unter `content/` (Code-as-Content, schnell, versioniert, Git-Diff-bar).
+- Kein E-Commerce, kein Bezahl-Flow — Reservierung läuft als Anfrage, kein Online-Vorab-Bezahlen.
+- Keine externen Tracker, keine Drittanbieter-Cookies, kein GA4 — alles self-hosted in unserer SQLite-DB.
+- Keine Push-Notifications, kein Newsletter-Tool (würden Drittanbieter-Setup erfordern).
 
 ---
 
@@ -33,12 +33,17 @@ Statische, hochwertige Website für das **Restaurant Alt-Karow** (Berlin-Karow, 
 
 | Schicht       | Wahl                              | Begründung                                                            |
 | ------------- | --------------------------------- | --------------------------------------------------------------------- |
-| Framework     | **Next.js 16 (App Router)**       | Static Export-fähig, Image Optimization, SEO-Metadata-API.            |
+| Framework     | **Next.js 16 (App Router)**       | Hybrid: statische Marketing-Pages + dynamische API-Routes für Forms/Admin/Analytics. |
 | Sprache       | **TypeScript 5 strict**           | `tsconfig.json` mit `strict: true`, `jsx: "react-jsx"`.               |
-| Styling       | **Tailwind CSS v4** (`@theme inline`) | Theme-Tokens als CSS-Custom-Properties; kein PostCSS-Plugin-Wirrwarr. |
+| Styling       | **Tailwind CSS v4** (`@theme inline`) | Theme-Tokens als CSS-Custom-Properties via `@theme` in `globals.css`. |
 | Fonts         | `next/font/google`                | Playfair Display (Headings, Serif) + Inter (Body, Sans).             |
-| Bilder        | `next/image`                      | AVIF-Optimierung; Bilder in `public/images/`.                         |
-| Node          | ≥ 20 LTS                          |                                                                       |
+| Bilder        | `next/image`                      | AVIF/WebP-Optimierung; Bilder in `public/images/`.                    |
+| Datenbank     | **better-sqlite3**                | Single-File-SQLite, WAL-Mode, synchrone API. Singleton in `lib/db.ts`. |
+| Mail          | **nodemailer ^8**                 | Strato SMTP. Singleton-Transporter in `lib/mailer.ts`.                |
+| Auth          | HMAC-Cookie + bcryptjs            | Admin-Bereich, kein externes Auth-Framework. `lib/admin-auth.ts`.     |
+| PDF           | **pdf-lib**                       | Reservierungsbestätigungen zur Laufzeit, ohne Schrift-Dateien.        |
+| Analytics     | **self-hosted in SQLite**         | Eigener Tracker, kein GA4. Tabellen in DB, Helpers in `lib/analytics/*`. |
+| Node          | ≥ 20 LTS                          | Auf VPS: Node 20.20.x.                                                |
 | Process Mgr   | PM2 (Production)                  | Gemeinsamer systemd-Service mit wappsite.                             |
 | Reverse Proxy | Nginx (eigener Server-Block)      | Port 3001 → 443 mit TLS.                                              |
 | TLS           | Let's Encrypt / Certbot           | Auto-Renewal via vorhandenem `certbot.timer`.                         |
@@ -46,9 +51,10 @@ Statische, hochwertige Website für das **Restaurant Alt-Karow** (Berlin-Karow, 
 ### Wichtige Hinweise zu Next.js 16
 
 - **App Router** ist Pflicht — kein `pages/`-Verzeichnis.
-- Komponenten sind **Server-Komponenten by default**. Nur `Header.tsx` ist `"use client"` (Mobile-Menü-State, Scroll-Listener). Alles andere ist Server-Side.
+- Komponenten sind **Server-Komponenten by default**. Client-Komponenten ausdrücklich mit `"use client"`. Aktuell client-side: Header, Reveal, ScrollDepthTracker, GlobalClickTracker, AnalyticsProvider, CookieBanner, CookieSettingsLink, AdminNav, AdminReservationsTable, AdminLoginForm, AdminLogoutButton + alle Form-Komponenten.
 - Bei Bibliotheks- oder Konfigurationsfragen zu Next.js: **immer aktuelle Doku konsultieren** (z. B. via `context7` MCP) — Next.js 16 enthält Breaking Changes gegenüber 13/14/15.
-- Static Generation: alle Seiten sind `○ (Static)` — kein SSR nötig, kein API-Endpoint, daher reicht ein simpler Node-Server hinter Nginx (oder ggf. ein späteres `next export` für ein reines CDN-Deployment).
+- Build-Ergebnis: statische Marketing-Pages (`○`) + dynamische API/Admin-Routes (`ƒ`). `npm run build` listet die Aufteilung am Ende.
+- **`@next/env` ist CommonJS** — bei Imports in eigenen Skripten kein named import, sondern `import nextEnv from "@next/env"; const { loadEnvConfig } = nextEnv;`.
 
 ---
 
@@ -57,25 +63,28 @@ Statische, hochwertige Website für das **Restaurant Alt-Karow** (Berlin-Karow, 
 ```
 restaurantaltkarow/
 ├── app/
-│   ├── layout.tsx              # Root: Header + Footer + Fonts + JSON-LD
-│   ├── page.tsx                # Startseite
-│   ├── globals.css             # Tailwind + @theme + @layer base/components
-│   ├── icon.svg                # Favicon (App-Router-Konvention)
-│   ├── sitemap.ts              # auto-generiert /sitemap.xml
-│   ├── robots.ts               # auto-generiert /robots.txt
+│   ├── layout.tsx                          # Root: Header + Footer + Fonts + JSON-LD + Tracker
+│   ├── page.tsx                            # Startseite
+│   ├── globals.css                         # Tailwind v4 + @theme + @layer base/components
+│   ├── icon.png                            # Favicon (Logo „K" in Fraktur)
+│   ├── sitemap.ts                          # auto-generiert /sitemap.xml
+│   ├── robots.ts                           # auto-generiert /robots.txt
 │   ├── api/
-│   │   ├── buffet-anfrage/route.ts        # POST: Buffet-Config → Mail
-│   │   ├── kontakt/route.ts               # POST: Kontaktformular → Mail
-│   │   ├── reservieren/route.ts           # POST: Reservierung anlegen
+│   │   ├── buffet-anfrage/route.ts          # POST: Buffet-Config → Mail
+│   │   ├── kontakt/route.ts                 # POST: Kontaktformular → Mail
+│   │   ├── reservieren/route.ts             # POST: Reservierung anlegen
+│   │   ├── consent/route.ts                 # POST: Consent-Entscheidung loggen
+│   │   ├── analytics/track/route.ts         # POST: Event tracken (Pageview/Click/Form/Scroll)
 │   │   └── admin/
-│   │       ├── login/route.ts             # POST: Admin-Login + Cookie
-│   │       ├── logout/route.ts            # POST: Cookie löschen
-│   │       └── reservations/[id]/route.ts # PATCH: confirm/decline/propose
+│   │       ├── login/route.ts               # POST: Admin-Login + Cookie
+│   │       ├── logout/route.ts              # POST: Cookie löschen
+│   │       └── reservations/[id]/route.ts   # PATCH: confirm/decline/propose
 │   ├── admin/
-│   │   ├── layout.tsx                     # Noindex-Wrapper
-│   │   ├── page.tsx                       # Dashboard (Server-Component)
-│   │   └── login/page.tsx
-│   ├── reservieren/page.tsx               # Public Reservierungsformular
+│   │   ├── layout.tsx                       # Noindex-Wrapper
+│   │   ├── page.tsx                         # Dashboard Reservierungen (Server-Component)
+│   │   ├── login/page.tsx
+│   │   └── analytics/page.tsx               # Self-hosted Analytics-Dashboard
+│   ├── reservieren/page.tsx                 # Public Reservierungsformular
 │   ├── speisekarte/page.tsx
 │   ├── veranstaltungen/
 │   │   ├── page.tsx
@@ -86,46 +95,67 @@ restaurantaltkarow/
 │   ├── impressum/page.tsx
 │   └── datenschutz/page.tsx
 ├── components/
-│   ├── Header.tsx              # "use client" — sticky, Light/Dark-Modus je nach Scroll & Page
-│   ├── Footer.tsx              # dunkler Wood-Block mit Gold-Akzenten
-│   ├── Hero.tsx                # Fullscreen-Hero mit mehrlagigem Overlay (.hero-vignette)
-│   ├── Reveal.tsx              # "use client" — IntersectionObserver Fade-up, einmalig
-│   ├── Ornament.tsx            # SVG-Rautendekoration (gold/cream/ink)
-│   ├── SectionHeading.tsx      # Eyebrow + H2 + Ornament + Description, tone dark/light
-│   ├── OpeningHours.tsx        # tabellarische Öffnungszeiten
-│   ├── ReservationCTA.tsx      # Burgundy-Section mit radialem Licht, jede Seite
-│   ├── MenuList.tsx            # Speisekarten-Sections mit Dotted-Leader
-│   ├── GalleryGrid.tsx         # responsives Grid mit Aspekt-Variation
-│   ├── BuffetForm.tsx          # "use client" — interaktiver Konfigurator (beide Typen)
-│   ├── BuffetPage.tsx          # geteilte Page-Struktur für Feier + Trauerfeier
-│   ├── ContactForm.tsx         # "use client" — Kontaktformular
-│   ├── ReservationForm.tsx     # "use client" — public Reservierungsformular
-│   ├── AdminLoginForm.tsx      # "use client" — Login-Form
-│   ├── AdminLogoutButton.tsx   # "use client"
-│   └── AdminReservationsTable.tsx # "use client" — Dashboard-Tabelle + Aktionen
+│   ├── Header.tsx                          # "use client" — sticky, Light/Dark je Scroll & Page
+│   ├── Footer.tsx                          # dunkles Wood + Schriftlogo + Gold-Akzente
+│   ├── Hero.tsx                            # Fullscreen-Hero mit mehrlagigem Overlay
+│   ├── Reveal.tsx                          # "use client" — IO Fade-up, einmalig
+│   ├── Ornament.tsx                        # SVG-Rautendekoration
+│   ├── SectionHeading.tsx                  # Eyebrow + H2 + Ornament, tone dark/light
+│   ├── OpeningHours.tsx                    # tabellarische Öffnungszeiten
+│   ├── ReservationCTA.tsx                  # Burgundy-Section, jede Seite
+│   ├── MenuList.tsx                        # Speisekarten-Sections mit Dotted-Leader
+│   ├── GalleryGrid.tsx                     # responsives Grid mit Aspekt-Variation
+│   ├── BuffetForm.tsx                      # "use client" — interaktiver Konfigurator
+│   ├── BuffetPage.tsx                      # geteilte Page für Feier + Trauerfeier
+│   ├── ContactForm.tsx                     # "use client" — Kontaktformular
+│   ├── ReservationForm.tsx                 # "use client" — Reservierungsformular
+│   ├── CookieBanner.tsx                    # "use client" — DSGVO-Banner (Alle / Nur notw. / Settings)
+│   ├── CookieSettingsLink.tsx              # "use client" — öffnet Banner erneut
+│   ├── AnalyticsProvider.tsx               # "use client" — Pageview-Tracker, session_start
+│   ├── GlobalClickTracker.tsx              # "use client" — Delegation: tel/mail/social/cta
+│   ├── ScrollDepthTracker.tsx              # "use client" — 25/50/75/100 %
+│   ├── AdminNav.tsx                        # "use client" — Tabs „Reservierungen | Analytics"
+│   ├── AdminLoginForm.tsx                  # "use client"
+│   ├── AdminLogoutButton.tsx               # "use client"
+│   ├── AdminReservationsTable.tsx          # "use client" — Tabelle + Aktionen
+│   └── admin/charts/
+│       ├── BarRow.tsx                       # horizontaler Balkenchart, dependency-frei
+│       ├── TimeSeries.tsx                   # SVG-Sparkline für tägliche Zeitserie
+│       └── HourHeatmap.tsx                  # 24-Stunden-Heatmap (Sessions)
 ├── content/
-│   ├── menu.ts                 # Speisekarten-Klassiker (Auswahl/Teaser)
-│   ├── gallery.ts              # Galerie-Items + Kategorien
-│   └── buffet.ts               # Buffet-Varianten, Speisen-Listen, Limits, Meta
+│   ├── menu.ts                             # Speisekarte (echte Karte aus PDF abgebildet)
+│   ├── gallery.ts                          # Galerie-Items + Kategorien
+│   └── buffet.ts                           # Buffet-Varianten, Gerichte, Limits, Meta
 ├── lib/
-│   ├── siteConfig.ts           # Stammdaten (Name, Adresse, Hours, Räume, Tel)
-│   ├── mailer.ts               # Singleton-Nodemailer-Transporter (Strato SMTP)
-│   ├── db.ts                   # SQLite-Singleton + Schema-Init
-│   ├── reservations.ts         # CRUD-Helper für Reservierungen
-│   ├── reservation-rules.ts    # pure Funktionen: Öffnungstage, Slots, Vorlauf
-│   ├── reservation-mail.ts     # 5 Mail-Templates (Text + HTML)
-│   ├── reservation-pdf.ts      # PDF-Bestätigung via pdf-lib
-│   └── admin-auth.ts           # HMAC-Cookie, bcrypt-Vergleich, Session-Helper
+│   ├── siteConfig.ts                       # Stammdaten + Räume mit Bildern
+│   ├── mailer.ts                           # Nodemailer-Transporter (Strato SMTP)
+│   ├── db.ts                               # SQLite-Singleton + Schema-Init (ALLE Tabellen)
+│   ├── reservations.ts                     # CRUD-Helper für Reservierungen
+│   ├── reservation-rules.ts                # pure Funktionen: Öffnungstage, Slots, Vorlauf
+│   ├── reservation-mail.ts                 # 5 Mail-Templates (Text + HTML)
+│   ├── reservation-pdf.ts                  # PDF-Bestätigung via pdf-lib
+│   ├── admin-auth.ts                       # HMAC-Cookie, bcrypt-Vergleich, Session
+│   ├── cookie-consent.ts                   # Consent-State im localStorage + Events
+│   ├── analytics-events.ts                 # Client-seitiges Event-API (events.xxx)
+│   └── analytics/
+│       ├── types.ts                         # POLICY_VERSION, EventType, ConsentState
+│       ├── server.ts                        # hashVisitorId, parseUA, Country/Lang, Validators, RateLimit
+│       ├── db.ts                            # ingestEvent (transaktional), recordConsent
+│       └── aggregations.ts                  # KPIs, Top-Listen, Funnel, Recent (für Admin)
+├── scripts/
+│   ├── hash-password.mjs                   # bcrypt-Hash mit `\$`-Escape erzeugen
+│   ├── check-admin-auth.mjs                # Diagnose: passt Passwort zum Hash in .env?
+│   └── check-nextenv.mjs                   # Diagnose: was lädt Next.js wirklich aus .env?
 ├── public/
-│   ├── images/                 # Hero-/Galerie-Bilder
-│   └── dokumente/              # speisekarte.pdf, feierbuffet.pdf, trauerfeierbuffet.pdf
-├── data/                       # SQLite-Datenbank (gitignored)
-├── Bilder/                     # User-Quellordner (gitignored)
-├── Speisekarte/                # User-Quellordner für Original-PDF (gitignored, 121 MB)
-├── Konfigurationsblätter/      # User-Quellordner für Buffet-PDFs (gitignored)
-├── secure/                     # Plain-text Zugangsdaten + Admin-Hash (gitignored!)
+│   ├── images/                             # Hero/Galerie/Räume/Schriftlogo (PNG + AVIF)
+│   └── dokumente/                          # speisekarte.pdf, feierbuffet.pdf, trauerfeierbuffet.pdf
+├── data/                                   # SQLite-Datenbank (gitignored)
+├── Bilder/                                 # User-Quellordner (gitignored)
+├── Speisekarte/                            # User-Quellordner Original-PDF (gitignored)
+├── Konfigurationsblätter/                  # User-Quellordner Buffet-PDFs (gitignored)
+├── secure/                                 # Zugangsdaten (gitignored!) — email.txt, admin.txt
 ├── .env.example
-├── .env.local                  # SMTP-Credentials (gitignored)
+├── .env.local                              # Credentials (gitignored)
 ├── .gitignore
 ├── CLAUDE.md
 ├── DEPLOYMENT.md
@@ -397,6 +427,7 @@ Das aufgeklappte Mobile-Menü ist **immer** im hellen Modus (`bg-paper` + `text-
 | Buffet-Konfigurator (Feier) | `/veranstaltungen/feierbuffet` | `POST /api/buffet-anfrage` | Buffet-Variante + Speisen-Auswahl + Kontaktdaten | Honeypot-Feld `website` |
 | Buffet-Konfigurator (Trauer) | `/veranstaltungen/trauerfeierbuffet` | (gleicher Endpoint, `type: "trauerfeier"`) | + Eröffnungsgetränke | Honeypot |
 | Kontaktformular | `/kontakt` | `POST /api/kontakt` | Name, E-Mail, Telefon, Anlass, Nachricht | Honeypot + Email-Validierung + Length-Cap |
+| Reservierungsformular | `/reservieren` | `POST /api/reservieren` | Datum, Zeit, Personen, Name, Mail, Telefon, Anmerkungen | Honeypot + Datum/Slot-Validierung (`reservation-rules.ts`) |
 
 **Konventionen für künftige Formulare:**
 
@@ -519,57 +550,106 @@ Pdf-lib mit StandardFonts (Times Roman) — keine externe Schrift-Datei nötig.
 
 ---
 
-## 4.7 Cookie-Consent + Analytics (GA4)
+## 4.7 Cookie-Consent + Self-Hosted Analytics
 
-### Architektur
+> **Historie:** Ursprünglich war GA4 vorgesehen. Wurde im Mai 2026 komplett rausgeworfen zugunsten einer **self-hosted** Lösung in unserer SQLite-DB. Keine externen Tracker, keine Drittlandübermittlung, keine Cookies — DSGVO-mäßig drastisch einfacher.
 
-- **Consent-Speicherung:** `localStorage` (kein Cookie), Key `rak-consent`. Schema in `lib/cookie-consent.ts`. Bei Version-Bump (`CURRENT_CONSENT_VERSION`) wird der Banner automatisch wieder angezeigt.
-- **Banner:** `components/CookieBanner.tsx` — drei Buttons (Alle akzeptieren / Nur notwendige / Einstellungen), DSGVO-konform, im Admin-Bereich ausgeblendet.
-- **Cookie-Einstellungen erneut öffnen:** `components/CookieSettingsLink.tsx` — feuert das `rak-consent-reopen` Custom-Event, der Banner reagiert darauf. Eingebunden in Footer + Datenschutzerklärung.
+### Cookie-Consent
 
-### GA4-Integration
+- **Speicherung:** Browser-`localStorage` (kein Cookie), Key `rak-consent`. Schema in `lib/cookie-consent.ts`. Bei Bump von `CURRENT_CONSENT_VERSION` zeigt sich der Banner automatisch wieder.
+- **Banner:** `components/CookieBanner.tsx` — drei Buttons („Alle akzeptieren" / „Nur notwendige" / „Einstellungen"). Im Admin-Bereich ausgeblendet (`pathname.startsWith("/admin")`).
+- **Erneut öffnen:** `components/CookieSettingsLink.tsx` — Button feuert das `rak-consent-reopen` Custom-Event, Banner reagiert. Eingebunden in Footer und Datenschutzerklärung.
+- **Server-Spiegelung:** Bei jeder Banner-Entscheidung wird `sendConsentDecision()` aufgerufen → POST `/api/consent` → Eintrag in `consents`-Tabelle. So gibt's eine Auswertung „wie viele User akzeptieren Analytics" im Admin-Dashboard.
 
-- **Loader:** `components/AnalyticsProvider.tsx` — Client-Komponente im Root-Layout. Holt die Measurement-ID vom Server (`GET /api/settings/ga`, public), lädt `gtag.js` **nur** wenn ID gesetzt **und** Consent erteilt. Reagiert live auf Consent-Änderungen via `rak-consent-updated` Custom-Event.
-- **Konfiguration:** `anonymize_ip: true`, `allow_google_signals: false`, `allow_ad_personalization_signals: false`, `send_page_view: false` (SPA-Pageviews fire manuell via `usePathname()`).
-- **Consent Mode v2:** Default-State `analytics_storage: 'granted'`, ad-bezogene States auf `denied`. Wenn Consent fehlt, wird gtag.js gar nicht erst geladen.
-- **Measurement-ID-Verwaltung:** Im Admin unter `/admin/settings`. Wird in der `settings`-Tabelle (SQLite) gespeichert. Validierung: `/^G-[A-Z0-9]{4,16}$/`.
+### Tracker-Architektur
+
+| Komponente | Zweck |
+|---|---|
+| `AnalyticsProvider.tsx` | Liest Consent, feuert `session_start` (einmal pro Tab) + `pageview` bei jeder Route-Änderung |
+| `GlobalClickTracker.tsx` | Event-Delegation: `tel:`/`mailto:`/Instagram/Maps/externe Links + `data-track`-Attribute |
+| `ScrollDepthTracker.tsx` | Bei 25/50/75/100 % Scroll: `scroll_depth`-Event. Reset bei Route-Change. |
+| Form-Komponenten | Senden `form_start` (erster Fokus) + `form_submit` (nach erfolgreichem Versand) mit Meta-Daten |
+
+Alle Events sind in `lib/analytics-events.ts` typisiert (`events.xxx(...)`). Aufrufe vor Consent werden **stillschweigend verworfen** — Components müssen sich nicht um Consent-State kümmern, einfach `events.ctaClick(...)` rufen.
+
+### Datenfluss
+
+```
+Browser
+  ↓  (nach Consent)
+events.xxx()  →  POST /api/analytics/track  →  ingestEvent() (lib/analytics/db.ts)
+                                                    ↓  (Transaktion)
+                                              ┌─────┴─────┬─────────┐
+                                              ▼           ▼         ▼
+                                       analytics_     analytics_   analytics_
+                                       visitors      sessions     events
+```
+
+Pro Event-POST wird **transactional**:
+1. Visitor-Day-Record erstellt (für Unique-Visitor-Tracking)
+2. Session upsert (neu oder `last_seen_at` + Dauer updaten)
+3. Event-Row mit allen Details
+
+### Visitor-Identität (DSGVO-konform)
+
+- **Keine IP-Speicherung.** Stattdessen `visitorId = sha256(secret + UTC-Date + ip + ua-prefix).slice(0,24)`.
+- **Tages-rotierender Salt** → keine cross-day-Korrelation möglich.
+- UA wird auf 80 Zeichen gekürzt, dann gehasht.
+- Hashing in `lib/analytics/server.ts` (`hashVisitorId`, `hashIp`).
+
+### Datenbank-Tabellen
+
+| Tabelle | Inhalt |
+|---|---|
+| `consents` | Jede Consent-Entscheidung mit `analytics/marketing/functional`, `policy_version`, `ip_hash`, `user_agent` |
+| `analytics_visitors` | `(visitor_id, date)` PK — für Unique-Visitor-Zählung |
+| `analytics_sessions` | Session-Metadaten: Entry-Path, Referrer, Device, Browser, OS, Lang, Country, `pageviews`, `event_count`, `duration_ms` |
+| `analytics_events` | Roh-Events: type, page_path, cta_id, form_id, scroll_pct, meta, plus alle Session-Felder als Snapshot |
+
+Indizes auf `created_at`, `type`, `path`, `session_id`, `visitor_id`.
 
 ### Event-Catalog
 
-Alle Events sind in `lib/analytics-events.ts` typisiert und namespaced (`events.xxx(...)`). Aufrufe sind no-ops, wenn gtag nicht geladen ist — Components müssen sich um Consent nicht kümmern.
-
-| Event | Wo wird's gefeuert | Parameter |
+| Event | Wo gefeuert | Wichtige Parameter |
 |---|---|---|
-| `page_view` | `AnalyticsProvider` bei jeder Route-Änderung | path, location, title |
-| `phone_click` | `GlobalClickTracker` bei `tel:`-Links | click_location |
-| `email_click` | `GlobalClickTracker` bei `mailto:` | click_location |
-| `instagram_click` | `GlobalClickTracker` bei instagram.com-Links | click_location |
-| `maps_click` | `GlobalClickTracker` bei Google-Maps / OSM | click_location |
-| `external_link_click` | `GlobalClickTracker` bei externen Links | link_host, click_location |
-| `pdf_download` | `GlobalClickTracker` bei `.pdf`-Links oder `download`-Attribut | file_name, click_location |
-| `cta_click` | bei Element mit `data-track="label"` | cta_label, click_location |
-| `nav_click` | (reserviert für künftige Nav-Events) | nav_label, mobile_menu |
-| `scroll_depth` | `ScrollDepthTracker` bei 25/50/75/100 % | percent_scrolled, page_path |
-| `form_start` | Reservation/Contact/Buffet bei erstem `onFocus` | form_name |
-| `form_submit` | nach Validierung, vor Server-Call | form_name |
-| `form_success` | nach erfolgreichem Server-Response | form_name |
-| `form_error` | bei Validierungs-/Server-Fehler | form_name, error_message |
-| `reservation_request` | nach erfolgreicher Reservierung | party_size, reservation_date, reservation_time |
-| `buffet_request` | nach erfolgreichem Buffet-Versand | buffet_type, variant_id, party_size |
-| `contact_request` | nach erfolgreichem Kontaktversand | contact_topic |
-| `consent_decision` | (reserviert, aktuell ungenutzt) | analytics_granted |
+| `pageview` | `AnalyticsProvider` bei Route-Change | `pagePath` |
+| `session_start` | `AnalyticsProvider` einmalig pro neuer Session | `referrer` |
+| `cta_click` | `GlobalClickTracker` bei `data-track`-Attribut | `ctaId` |
+| `outbound_click` | `GlobalClickTracker` bei tel/mail/social/maps/external | `ctaId` = kind, `meta.host` |
+| `scroll_depth` | `ScrollDepthTracker` 25/50/75/100 % | `scrollPct` |
+| `form_start` | Form bei erstem Fokus | `formId` |
+| `form_submit` | nach erfolgreichem Server-Response | `formId`, optional `meta` (party_size, contact_topic, buffet_type, ...) |
+| `form_abandon` | (reserviert für späteres Cleanup-Tracking) | `formId` |
 
-### Neue Events ergänzen
+### Admin-Dashboard `/admin/analytics`
 
-1. Funktion in `lib/analytics-events.ts` unter `events` hinzufügen (typisiert).
-2. Aufrufen, wo sinnvoll — entweder direkt inline, oder via `data-track` auf einem Element (delegation in `GlobalClickTracker.tsx`).
-3. In GA4 → Konfigurieren → benutzerdefinierte Definitionen die neuen Event-Parameter als „benutzerdefinierte Dimensionen" registrieren, damit sie in Berichten erscheinen.
+Server-Component liest direkt aus DB via `lib/analytics/aggregations.ts`:
+
+- KPIs: Sessions, Unique Visitors, Pageviews, Ø Session-Dauer, Bounce Rate, Form-Starts/-Submits, Conversion, Consent-Akzeptanz-Quote
+- Tägliche Zeitserie (SVG-Sparkline)
+- Top: Seiten, Referrer, CTAs
+- Funnel (Pageview → Form-Start → Form-Submit, distinct sessions)
+- Geräte / Browser / OS / Sprachen (Top-Listen)
+- Stunden-Heatmap + Wochentage
+- Neu vs. wiederkehrend
+- Consent-Übersicht
+- Letzte 30 Roh-Events (Tabelle)
+
+URL-Param `?period=today|7d|30d|90d`.
 
 ### Wichtige Konventionen
 
-- Analytics ist **nicht** im Admin abschaltbar — nur die GA4-ID. Wenn ID leer, wird gtag.js nicht geladen (faktisches Off).
-- `GlobalClickTracker` läuft global im Layout → keine onClick-Handler pro Link nötig. Für CTA-Tracking einfach `data-track="kurzer_label"` auf das Element.
-- Pageviews werden manuell bei Route-Change gefeuert, weil `send_page_view: false` in der gtag-Config steht. Sonst gäbe es Doppel-Events bei SPA-Navigation.
+- **Analytics ist NICHT im Admin deaktivierbar** — kein Setting für „Tracking aus". Wenn der User keinen Consent gibt, wird gar nichts getrackt. Punkt.
+- `data-track="kurzer_label"` an einem Element reicht für CTA-Tracking. Delegation läuft global in `GlobalClickTracker`.
+- **Rate-Limit** pro IP: 240 Track-Events/min, 30 Consent-Events/min (in-memory Bucket in `lib/analytics/server.ts`).
+- **Niemals** `sendBeacon` für reguläre Events nutzen außer für Scroll/Unload — `fetch` mit `keepalive: true` ist Default.
+- Wenn Stats leer wirken: zuerst Browser-DevTools → Network nach `POST track 204` filtern. Wenn keine POSTs → Consent fehlt oder JS-Bundle ist alt (Hard-Refresh `Ctrl+Shift+R`).
+
+### Neue Events ergänzen
+
+1. Event-Type in `lib/analytics/types.ts` (Union `EventType`) ergänzen + Whitelist in `isValidEventType` in `lib/analytics/server.ts`.
+2. Wrapper in `lib/analytics-events.ts` unter `events` hinzufügen.
+3. Optional: in `app/admin/analytics/page.tsx` eine eigene Aggregation/Top-Liste ergänzen, sonst landet das Event nur im Roh-Stream.
 
 ---
 
@@ -629,7 +709,7 @@ Alle Events sind in `lib/analytics-events.ts` typisiert und namespaced (`events.
 - **OpenGraph:** Standard-Image `/images/aussenansicht.avif`, Type `website`, Locale `de_DE`.
 - **JSON-LD `Restaurant`** in `app/layout.tsx` mit `name`, `address`, `telephone`, `openingHoursSpecification`, `servesCuisine`, `priceRange: "€€"`. Strukturierte Daten für Google Local Pack / Maps-Card.
 - **`sitemap.xml`** dynamisch via `app/sitemap.ts` (Next-Konvention).
-- **`robots.txt`** via `app/robots.ts` mit `sitemap`-URL und `disallow: ['/impressum', '/datenschutz']`.
+- **`robots.txt`** via `app/robots.ts` mit `sitemap`-URL und `disallow: ['/impressum', '/datenschutz', '/admin', '/admin/login']`.
 - **Keywords:** Auf lokale Restaurant-Suchbegriffe optimiert („Restaurant Berlin Karow", „Restaurant Pankow", „Deutsche Küche Berlin", „Bankettsaal Berlin", „Hochzeit Restaurant Berlin").
 
 ---
@@ -638,10 +718,12 @@ Alle Events sind in `lib/analytics-events.ts` typisiert und namespaced (`events.
 
 | Datentyp                  | Datei                          | Hinweis                                                           |
 | ------------------------- | ------------------------------ | ----------------------------------------------------------------- |
-| Adresse, Telefon, Hours, Räume, Tagline | `lib/siteConfig.ts`  | Single Source of Truth — wird von Header, Footer, JSON-LD, allen Seiten konsumiert |
-| Speisekarten-Sections     | `content/menu.ts`              | Mit `id` (für Anker-Nav), `title`, `subtitle`, `items[]`. Items: `name`, `description?`, `price?`, `tags?` |
+| Adresse, Telefon, Hours, Räume (mit Bildern), Tagline | `lib/siteConfig.ts`  | Single Source of Truth — wird von Header, Footer, JSON-LD, allen Seiten konsumiert. Räume haben `image?` + `alt`. |
+| Speisekarten-Sections     | `content/menu.ts`              | Echte Karte (aus `Speisekarte/speisekarte.pdf` übernommen). Mit `id` (Anker-Nav), `title`, `subtitle`, `note?`, `items[]`. Items: `name`, `description?`, `price?`, `tags?` |
 | Galerie-Bilder            | `content/gallery.ts`           | `src`, `alt`, `caption?`, `category` (`restaurant` / `speisen` / `veranstaltungen` / `ambiente`) |
-| Bilder                    | `public/images/`               | AVIF bevorzugt; `next/image` macht den Rest                       |
+| Buffet-Konfiguration      | `content/buffet.ts`            | Varianten, Gerichte, Beilagen, Suppen, Vorspeisen, Schnittchen, Desserts, Limits, Meta-Texte pro Buffet-Typ |
+| Reservierungs-Regeln      | `lib/reservation-rules.ts`     | Pure Funktionen: Öffnungstage, Slot-Generierung (12:00 – 20:00 / 16:00), Mindest-Vorlauf 2 Öffnungstage |
+| Bilder                    | `public/images/`               | JPG für Foto-Aufnahmen, PNG fürs Schriftlogo, AVIF wo verfügbar. `next/image` optimiert.       |
 
 **Wichtig:** Speisekarte und Galerie sind so strukturiert, dass neue Inhalte **nur durch Editieren der `.ts`-Datei** dazukommen. Neue Galerie-Kategorie? Eintrag in `galleryCategories`. Keine UI-Änderung nötig.
 
@@ -652,7 +734,7 @@ Alle Events sind in `lib/analytics-events.ts` typisiert und namespaced (`events.
 1. **Keine voreilige Komplexität.** Lieber drei Zeilen wiederholen als eine vorzeitige Abstraktion. Tailwind-Utilities direkt im JSX sind ok, solange sie nicht zur Tapete werden.
 2. **Server-Komponenten by default.** `"use client"` nur, wenn wirklich Browser-State, Event-Handler oder Effects nötig sind.
 3. **Inhalte gehen in `content/` oder `lib/siteConfig.ts`.** Keine hardcoded Strings in Komponenten, wenn die Information mehrfach gebraucht wird oder vom Betreiber später geändert werden könnte.
-4. **Keine Datenbank, kein Prisma, kein Auth-System** ohne ausdrückliche Anforderung.
+4. **Wir HABEN bereits:** SQLite (better-sqlite3), HMAC-Cookie-Auth, Self-hosted Analytics. Vor dem Hinzufügen weiterer Persistenz/Auth-Schichten (Prisma, NextAuth, Drittanbieter-DB) erst klären, ob das wirklich nötig ist — die aktuelle Lösung trägt deutlich mehr als ein Restaurant-Site bräuchte.
 5. **`.env.production` niemals committen**, immer `chmod 600` auf dem Server.
 6. **Lokale Entwicklung:** `npm run dev` läuft auf `http://localhost:3000`. Server: `127.0.0.1:3001`. Diskrepanz absichtlich.
 7. **Commits/Pushes nicht selbst ausführen.** Git-Operationen führt der User selbst aus; Agents geben die Befehle aus. (Siehe Memory-Eintrag `feedback_git_commits`.)
@@ -671,35 +753,65 @@ Alle Events sind in `lib/analytics-events.ts` typisiert und namespaced (`events.
    npm run build
    pm2 reload restaurantaltkarow --update-env
    ```
-   Auch bei kleinen Änderungen: lieber den vollständigen Mini-Block geben als „push und auf dem Server pullen". (Siehe Memory-Eintrag `feedback_console_commands`.)
-8. **`npm audit fix --force` NIEMALS ausführen.** `npm audit` meldet eine moderate `postcss < 8.5.10`-XSS-Schwachstelle (kommt transitiv über Next.js). `--force` würde Next auf 9.3.3 downgraden. Build-Time-only, mit eigenen CSS-Dateien praktisch nicht ausnutzbar. Lösung: abwarten, oder via `overrides` in `package.json` auf `postcss ^8.5.10` pinnen.
-9. **Vor jedem grafischen Eingriff** kurz prüfen: passt die Änderung zur Vintage-Identität (Farben, Typo, Ornamente)? Wenn unsicher → `SectionHeading` + `Ornament` einsetzen, nicht eigene neue Elemente erfinden.
-10. **Bei jeder neuen Seite** `metadata` exportieren (mindestens `title` + `description`) und in `app/sitemap.ts` ergänzen, falls indexierbar.
-11. **Typografische Anführungszeichen** in TypeScript-Strings sind tückisch — beim Mischen mit `"…"` kann ein unausgeglichenes `"` den Parser zerschießen (passiert mit „Medovik"). Im Zweifel `&bdquo;` und `&ldquo;` oder Backticks nutzen.
+   Auch bei kleinen Änderungen: lieber den vollständigen Mini-Block geben als „push und auf dem Server pullen". (Siehe Memory-Eintrag `feedback_console_commands`.) **Commit-Messages: kurze Einzeiler, max ~70 Zeichen, kein Body, kein HEREDOC.**
+9. **`npm audit fix --force` NIEMALS ausführen.** `postcss`-Warnung ist transitiv über Next.js, `--force` würde Next downgraden. Postcss ist via `overrides` in `package.json` auf `^8.5.10` gepinnt.
+10. **Vor jedem grafischen Eingriff** kurz prüfen: passt die Änderung zur Vintage-Identität (Farben, Typo, Ornamente)? Wenn unsicher → `SectionHeading` + `Ornament` einsetzen, nicht eigene neue Elemente erfinden.
+11. **Bei jeder neuen Seite** `metadata` exportieren (mindestens `title` + `description`) und in `app/sitemap.ts` ergänzen, falls indexierbar.
+12. **Typografische Anführungszeichen** in TypeScript-Strings sind tückisch — beim Mischen mit `"…"` kann ein unausgeglichenes `"` den Parser zerschießen (passiert mit „Medovik"). Im Zweifel `&bdquo;` und `&ldquo;` oder Backticks nutzen.
+13. **bcrypt-Hashes in `.env`** müssen jedes `$` mit `\` escapen — sonst frisst Next.js' dotenv-expand die `$2a$12$…`-Sequenzen und der Hash kommt zerstört im Prozess an. Beispiel: `ADMIN_PASSWORD_HASH=\$2a\$12\$abc…`. Das `scripts/hash-password.mjs`-Helfer-Skript gibt die Zeile bereits korrekt escapet aus.
+14. **`@next/env` ist CommonJS** — beim Import in `.mjs`-Skripten **kein** named import. Stattdessen: `import nextEnv from "@next/env"; const { loadEnvConfig } = nextEnv;` (siehe `scripts/check-nextenv.mjs`).
+15. **`sqlite3` CLI ist auf Ubuntu nicht standardmäßig drin** — vor DB-Diagnose: `sudo apt install -y sqlite3`. Alternative: Node-One-Liner mit `better-sqlite3` (ist sowieso installiert).
+16. **PM2-Reload nach `.env.production`-Änderung** zwingend mit `--update-env`. Ohne dieses Flag behält PM2 die alten Env-Variablen im Prozess.
+
+---
+
+## 8.5 Hilfsskripte unter `scripts/`
+
+Diagnose- und Verwaltungs-Helfer. Aufrufbar via `node scripts/<name>.mjs` oder `npm run`-Alias.
+
+| Skript | Zweck | Aufruf |
+|---|---|---|
+| `hash-password.mjs` | Generiert bcrypt-Hash für `ADMIN_PASSWORD_HASH`, **gibt ihn `\$`-escapet aus** (dotenv-expand-safe) | `npm run admin:hash -- "neuesPasswort"` |
+| `check-admin-auth.mjs` | Liest `.env.production` mit eigenem Mini-Parser, vergleicht Klartext-Passwort gegen Hash via bcrypt — zeigt sofort, ob Login passen würde | `npm run admin:check -- "passwort"` |
+| `check-nextenv.mjs` | Lädt `.env.production` mit Next.js' eigenem Loader (`@next/env`) und zeigt was die laufende App wirklich sieht — fängt das `$`-Escape-Problem im Hash | `node scripts/check-nextenv.mjs` |
+
+Wichtige Diagnose-Reihenfolge bei „Admin-Login geht nicht":
+
+1. `npm run admin:check -- "passwort"` → ist Hash korrekt für dieses Passwort?
+2. `node scripts/check-nextenv.mjs` → kommt der Hash unverstümmelt im Next.js-Prozess an?
+3. Wenn beides ✓, aber Login schlägt fehl → PM2 hat alte Env: `pm2 reload restaurantaltkarow --update-env`.
 
 ---
 
 ## 9. Bekannte offene Punkte / nächste Schritte
 
-- [ ] **Speisekarte als PDF komprimieren & ablegen** unter `public/dokumente/speisekarte.pdf` (Original 121 MB → Ziel < 5 MB). Aktuell verlinkt die Seite auf einen 404-Pfad.
-- [ ] **`content/menu.ts`** (Klassiker-Teaser) bleibt zur Vorschau, kann bei Bedarf aktualisiert werden, sobald die echte Karte feststeht.
-- [ ] **Impressum** vervollständigen (verantwortliche Person, ggf. USt-IdNr.).
-- [ ] **Datenschutzerklärung** anwaltlich prüfen lassen — vor Live-Gang besonders, weil jetzt Formulare personenbezogene Daten verarbeiten (Kontakt, Buffet-Anfragen).
-- [ ] **Mehr Bilder** in `public/images/` ablegen und in `content/gallery.ts` referenzieren.
-- [ ] **Echte Telefonnummer / E-Mail** verifizieren (`lib/siteConfig.ts`).
-- [ ] **Eigene Absender-Adresse** `kontakt@restaurant-alt-karow.berlin` einrichten, sobald Domain transferiert ist — aktuell sendet die Site über `restaurant@mijorent.de`, was die Spam-Wahrscheinlichkeit erhöht (Domain-Mismatch).
-- [ ] **E-Mail-Versand testen:** lokal mit `npm run dev` ein Buffet-Formular, eine Kontaktanfrage UND eine Reservierung absenden, im Postfach prüfen. Vor Live-Gang Pflicht.
-- [ ] **`.env.production` auf VPS** anlegen mit SMTP- UND Admin-Werten (`ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `DATABASE_PATH=/var/www/restaurantaltkarow/data/restaurantaltkarow.db`), `chmod 600`. Sonst funktionieren weder Mail-Versand noch Admin-Login.
-- [ ] **SQLite-Datenbank-Backup** einrichten auf dem VPS — Cron, z. B. täglich `cp data/*.db /var/backups/restaurantaltkarow/`. DB enthält Live-Reservierungen.
-- [ ] **Reservierungssystem auf Echtfälle testen:** Anfrage → Eingangs-Mail → Admin bestätigen → PDF-Mail prüfen. Dann Absage und Alternativ-Vorschlag testen.
-- [ ] **Optional: Reservierungs-Verwaltung erweitern** — Kalender-View, Wochenübersicht, Auslastung pro Slot, Kapazitätslimits (z. B. max. 60 Pers. gleichzeitig). Aktuell rein Listen-basiert.
-- [ ] **OG-Image-Variante** für Social Sharing.
-- [ ] **GitHub-Repo** anlegen, initialen Commit (durch den User).
-- [ ] **DNS für `restaurant-alt-karow.berlin`** beim Registrar setzen — siehe DEPLOYMENT.md §2.B. Records: `A @` + `A www` → `31.70.80.71`, optional CAA `0 issue "letsencrypt.org"`.
-- [ ] **Erstes Deployment** abschließen (siehe DEPLOYMENT.md).
-- [ ] **Migration zu Prisma** als ORM (statt direktem better-sqlite3). Vorteile: Schema-Migrations-Files versioniert, Type-Safety durch generiertes Schema, einfachere Wartung. Refactor wurde im letzten Turn geplant, aber zugunsten akuter Themen (Domain, Audit) verschoben. Touch-Points: `lib/db.ts`, `lib/reservations.ts`, alle Consumer mit `r.reservation_date` → `r.reservationDate` (camelCase via `@map`). Migration via `prisma migrate dev --name init` lokal, `prisma migrate deploy` auf VPS. `DATABASE_URL=file:./data/...` statt `DATABASE_PATH`.
-- [ ] **Bei erstem Deploy:** prüfen, ob `pm2-logrotate` bereits VPS-weit aktiv ist; sonst einmalig installieren (siehe DEPLOYMENT.md 5.7).
-- [ ] **Sobald weitere Projekte (mxprotec/mijocatering) live gehen:** Port-Tabelle in Abschnitt 5 auf Status „aktiv" aktualisieren.
+**Inhaltlich & rechtlich:**
+
+- [ ] **Datenschutzerklärung** anwaltlich prüfen lassen — Formulare + self-hosted Analytics + Cookie-Banner sind drin, der Text reflektiert das, aber rechtliche Final-Prüfung steht aus.
+- [ ] **Impressum** finale Verifikation durch Inhaber (USt-IdNr. „auf Anfrage" ggf. später eintragen).
+- [ ] **Mehr Bilder** ergänzen (Speisen, Feiern, Saison-Aufnahmen) — Galerie wächst dann automatisch über `content/gallery.ts`.
+- [ ] **`content/menu.ts`** synchron halten mit `public/dokumente/speisekarte.pdf`, falls Karte sich ändert.
+- [ ] **Eigene Absender-Adresse** `kontakt@restaurant-alt-karow.berlin` einrichten — aktuell sendet die Site über `restaurant@mijorent.de` (Spam-Risiko durch Domain-Mismatch).
+
+**Betrieb & Daten:**
+
+- [ ] **SQLite-Datenbank-Backup** auf dem VPS einrichten — Cron, z. B. täglich `cp data/*.db /var/backups/restaurantaltkarow/$(date +%F).db`. Enthält Live-Reservierungen UND Analytics-Daten.
+- [ ] **Aufbewahrungs-Cron für Analytics** — Roh-Events nach 90 Tagen löschen (in Datenschutzerklärung versprochen). Vorschlag: tägliches `DELETE FROM analytics_events WHERE created_at < datetime('now','-90 days')`.
+- [ ] **End-to-End-Test** durchspielen: Reservierungsanfrage → Eingangs-Mail → Admin bestätigen → PDF-Mail → einmal absagen → einmal Alternativ-Vorschlag.
+- [ ] **Optional: Reservierungs-Verwaltung erweitern** — Kalender-View, Auslastung pro Slot, Kapazitätslimits (z. B. max. 60 Pers. gleichzeitig). Aktuell rein Listen-basiert.
+
+**SEO / Polish:**
+
+- [ ] **OG-Image-Variante** für Social Sharing (1200×630 mit Logo + Tagline) — aktuell wird Hero-Aussenansicht genutzt.
+
+**Architektur (langfristig):**
+
+- [ ] **Migration zu Prisma** als ORM (statt direktem better-sqlite3). Vorteile: versionierte Migrations-Files, Type-Safety durch generiertes Schema. Touch-Points: `lib/db.ts` + alle Consumer mit snake_case → camelCase. Lokal `prisma migrate dev --name init`, VPS `prisma migrate deploy`. `DATABASE_URL=file:./data/…` statt `DATABASE_PATH`.
+
+**VPS-Wartung:**
+
+- [ ] **`pm2-logrotate`** ist als Modul auf dem VPS aktiv (gesehen in `pm2 list`). Standard-Einstellungen prüfen, ggf. `max_size`/`retain` anpassen.
+- [ ] **Sobald weitere Projekte (mxprotec/mijocatering) live gehen:** Port-Tabelle in §5 auf Status „aktiv" aktualisieren.
 
 ---
 
@@ -717,13 +829,14 @@ Alle Events sind in `lib/analytics-events.ts` typisiert und namespaced (`events.
 | Nginx-Config (Server)                  | `/etc/nginx/sites-available/restaurantaltkarow`                      |
 | Let's-Encrypt-Cert (Server)            | `/etc/letsencrypt/live/restaurant-alt-karow.berlin/`                     |
 | User-Memory (Cross-Session-Kontext)    | `C:\Users\PC\.claude\projects\C--Users-PC\memory\MEMORY.md`          |
-| Referenz-Live-Website (alt)            | https://www.restaurant-alt-karow.berlin/                                 |
+| Aktuelle Live-Website                  | https://restaurant-alt-karow.berlin                                  |
+| Frühere Wix-Website (offline)          | wurde durch unsere Site abgelöst — nur Inhalte/Adresse als Referenz übernommen |
 
 ---
 
 ## 11. Verhältnis zur alten Website
 
-Die bestehende Live-Website `www.restaurant-alt-karow.berlin` (Stand 2026) wurde inhaltlich als Referenz analysiert — Adresse, Öffnungszeiten, Räume, Tagline „Neuer Geschmack am vertrauten Ort" stammen daher. **Visuell und technisch** ist die neue Site eine komplette Neuentwicklung; nichts wurde kopiert.
+Vor diesem Projekt gab es eine Wix-Website auf einer früheren Domain (`.de`). Sie wurde inhaltlich als Referenz analysiert — Adresse, Öffnungszeiten, Räume, Tagline stammen daher. **Visuell und technisch** ist die aktuelle Site `restaurant-alt-karow.berlin` eine komplette Neuentwicklung; nichts wurde kopiert. Die alte Wix-Site ist inzwischen abgelöst.
 
 ---
 
