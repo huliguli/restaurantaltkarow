@@ -46,11 +46,27 @@ export function Reveal({
           }
         }
       },
-      { threshold: 0.1, rootMargin: "0px 0px -60px 0px" },
+      // threshold: 0 → triggert sobald 1 px sichtbar ist.
+      // Für sehr lange Elemente (z. B. Speisekarte mit allen Sektionen) wäre
+      // ein höherer Threshold nie erreichbar gewesen, weil das Element
+      // nicht zu 10 % in den Viewport passt → opacity:0 blieb hängen.
+      { threshold: 0, rootMargin: "0px 0px -40px 0px" },
     );
 
     io.observe(el);
-    return () => io.disconnect();
+
+    // Failsafe: wenn der Observer aus irgendeinem Grund nach 1.5 s nicht
+    // gefeuert hat (z. B. wegen scroll-margin / Anker-Sprung außerhalb des
+    // beobachteten Bereichs), zeigen wir den Inhalt trotzdem an.
+    const failsafe = window.setTimeout(() => {
+      setVisible(true);
+      io.disconnect();
+    }, 1500);
+
+    return () => {
+      io.disconnect();
+      window.clearTimeout(failsafe);
+    };
   }, []);
 
   return (

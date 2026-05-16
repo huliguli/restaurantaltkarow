@@ -109,9 +109,9 @@ export default function SpeisekartePage() {
             </nav>
           </Reveal>
 
-          <Reveal delay={200}>
-            <MenuList sections={menu} />
-          </Reveal>
+          {/* MenuList ist sehr lang — kein Reveal-Wrapper, sonst hängt der
+              Inhalt bei IntersectionObserver-Edge-Cases auf opacity:0. */}
+          <MenuList sections={menu} />
         </div>
       </section>
 
